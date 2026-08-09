@@ -9,6 +9,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold } from '@expo-google-fonts/jetbrains-mono';
 import { colors } from './src/theme/colors';
 import { AppProvider } from './src/context/AppContext';
+import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -33,12 +34,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.flex} onLayout={onLayout}>
       <SafeAreaProvider>
-        <AppProvider>
-          <View style={styles.flex}>
-            <StatusBar style="light" />
-            <RootNavigator />
-          </View>
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <View style={styles.flex}>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </View>
+          </AppProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

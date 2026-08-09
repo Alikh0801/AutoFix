@@ -7,12 +7,27 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { LogoMark } from '../../components/Logo';
 import { RootStackParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
+import { useApp, Role } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoleSelect'>;
 
 export function RoleSelectScreen({ navigation }: Props) {
   const { setRole } = useApp();
+  const { session } = useAuth();
+
+  const chooseRole = (role: Role) => {
+    setRole(role);
+    if (session) {
+      // Already signed in — go straight into the app for the chosen mode.
+      navigation.reset({
+        index: 0,
+        routes: [{ name: role === 'provider' ? 'ProviderRoot' : 'CustomerRoot' }],
+      });
+    } else {
+      navigation.replace('Login');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -29,19 +44,13 @@ export function RoleSelectScreen({ navigation }: Props) {
           icon="navigation"
           title="Müştəriyəm"
           desc="Yolda nasazlıq yarandı, kömək lazımdır"
-          onPress={() => {
-            setRole('customer');
-            navigation.replace('PhoneAuth');
-          }}
+          onPress={() => chooseRole('customer')}
         />
         <RoleOption
           icon="tool"
           title="Ustayam"
           desc="Yaxınlıqdakı sifarişləri qəbul edib qazanmaq istəyirəm"
-          onPress={() => {
-            setRole('provider');
-            navigation.replace('PhoneAuth');
-          }}
+          onPress={() => chooseRole('provider')}
         />
       </View>
     </SafeAreaView>

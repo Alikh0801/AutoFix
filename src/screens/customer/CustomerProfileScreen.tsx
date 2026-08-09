@@ -6,6 +6,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { resetToRoleSelect } from '../../navigation/navigationRef';
 
 const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
@@ -18,6 +19,7 @@ const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
 
 export function CustomerProfileScreen() {
   const { resetApp } = useApp();
+  const { signOut } = useAuth();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -55,7 +57,8 @@ export function CustomerProfileScreen() {
 
         <Pressable
           style={styles.logout}
-          onPress={() => {
+          onPress={async () => {
+            await signOut();
             resetApp();
             resetToRoleSelect();
           }}

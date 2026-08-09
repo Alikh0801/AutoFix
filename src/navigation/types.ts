@@ -3,8 +3,8 @@ import { ServiceCategoryId } from '../data/mock';
 export type RootStackParamList = {
   Onboarding: undefined;
   RoleSelect: undefined;
-  PhoneAuth: undefined;
-  Otp: { phone: string };
+  Login: undefined;
+  Register: undefined;
   CustomerRoot: undefined;
   ProviderRoot: undefined;
 };

@@ -8,6 +8,7 @@ import { Card } from '../../components/Card';
 import { RatingStars } from '../../components/RatingStars';
 import { serviceCategories } from '../../data/mock';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { resetToRoleSelect } from '../../navigation/navigationRef';
 
 const skills = ['battery', 'tire', 'lockout'] as const;
@@ -21,6 +22,7 @@ const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
 
 export function ProviderProfileScreen() {
   const { resetApp } = useApp();
+  const { signOut } = useAuth();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -74,7 +76,8 @@ export function ProviderProfileScreen() {
 
         <Pressable
           style={styles.logout}
-          onPress={() => {
+          onPress={async () => {
+            await signOut();
             resetApp();
             resetToRoleSelect();
           }}
