@@ -1,4 +1,4 @@
-export type ServiceCategoryId = 'battery' | 'tire' | 'fuel' | 'lockout' | 'tow' | 'other';
+export type ServiceCategoryId = 'battery' | 'tire' | 'fuel' | 'lockout' | 'other';
 
 export interface ServiceCategory {
   id: ServiceCategoryId;
@@ -86,7 +86,7 @@ export const mockUstas: Usta[] = [
     vehicle: 'Ford Transit · 90-BC-410',
     distanceKm: 2.4,
     etaMinutes: 7,
-    skills: ['battery', 'fuel', 'tow'],
+    skills: ['battery', 'fuel'],
     avatarColor: '#5FA8FF',
     initials: 'EM',
   },
