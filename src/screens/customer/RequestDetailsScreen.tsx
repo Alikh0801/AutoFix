@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,14 +7,23 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { serviceCategories } from '../../data/mock';
+import { useCategories } from '../../context/CategoriesContext';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'RequestDetails'>;
 
 export function RequestDetailsScreen({ route, navigation }: Props) {
-  const category = serviceCategories.find((c) => c.id === route.params.category)!;
+  const { getCategory } = useCategories();
+  const category = getCategory(route.params.category);
   const [note, setNote] = useState('');
+
+  if (!category) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centered]}>
+        <ActivityIndicator color={colors.amber} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -73,6 +82,7 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20 },
+  centered: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   backBtn: {
     width: 36,
