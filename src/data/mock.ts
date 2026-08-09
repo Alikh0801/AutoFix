@@ -13,9 +13,9 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: 'battery',
     title: 'Akkumulyator',
-    subtitle: 'Primička / işə salma',
+    subtitle: 'cərəyan / işə salma',
     icon: 'battery-charging',
-    avgPrice: '15-25 AZN',
+    avgPrice: '5-15 AZN',
     avgMinutes: 12,
   },
   {
@@ -36,19 +36,11 @@ export const serviceCategories: ServiceCategory[] = [
   },
   {
     id: 'lockout',
-    title: 'Açar qalıb',
+    title: 'Açar maşında qalıb',
     subtitle: 'Qapı açılması',
     icon: 'key',
     avgPrice: '15-25 AZN',
     avgMinutes: 10,
-  },
-  {
-    id: 'tow',
-    title: 'Evakuator',
-    subtitle: 'Çəkdirmə xidməti',
-    icon: 'truck',
-    avgPrice: '40-80 AZN',
-    avgMinutes: 25,
   },
   {
     id: 'other',

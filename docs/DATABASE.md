@@ -63,12 +63,25 @@ Parametrlər `platform_settings`-də (`price_step`, `base_commission`,
 
 | Funksiya | Kim | Nə edir |
 |----------|-----|---------|
-| `submit_offer(request_id, price)` | Usta | Təklif verir (bloksuz, açıq sorğu, ≥ minimum) |
+| `submit_offer(request_id, price)` | Usta | Təklif verir (bloksuz, açıq sorğu, ≥ minimum, **öz sorğusu deyil**) |
 | `accept_offer(offer_id)` | Müştəri | Birini seçir; digərlərini bağlayır |
 | `complete_request(request_id)` | Tərəflər | İşi bitirir; **nağd→borc+blok**, **kart→pul kisəsi** |
 | `pay_commission(amount)` | Usta | Nağd komissiya borcunu ödəyir; blok qalxır |
+| `submit_rating(request_id, stars, comment)` | Tərəflər | Yalnız tamamlanmış işdə **qarşı tərəfi** qiymətləndirir |
 | `commission_for(price)` | daxili | Qiymətə görə komissiya |
-| `nearby_open_requests(lat,lng,radius)` | Usta | Yaxın açıq sorğular |
+| `nearby_open_requests(lat,lng,radius)` | Usta | Yaxın açıq sorğular (**öz sorğuları görünmür**) |
+
+## Fırıldağın qarşısı (self-dealing)
+
+Bir istifadəçi eyni sorğuda həm müştəri, həm usta ola bilməz — beləcə özünə
+saxta reytinq yaza bilməz:
+
+- `submit_offer` öz sorğuna təklif verməyə icazə vermir.
+- `nearby_open_requests` öz sorğularını usta lentində göstərmir.
+- `accept_offer` öz təklifini qəbul etməyə imkan vermir (əlavə qoruma).
+- Reytinq yalnız `submit_rating` ilə verilir: iş **tamamlanmış** olmalı, verən
+  **iştirakçı** olmalı, qiymət **qarşı tərəfə** yazılır (`rater ≠ ratee` bazada
+  məcburidir). Birbaşa `ratings`-ə yazmaq bağlıdır.
 
 ## Sorğu axını
 
