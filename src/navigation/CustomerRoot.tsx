@@ -5,6 +5,8 @@ import { RequestDetailsScreen } from '../screens/customer/RequestDetailsScreen';
 import { SearchingScreen } from '../screens/customer/SearchingScreen';
 import { TrackingScreen } from '../screens/customer/TrackingScreen';
 import { RatingScreen } from '../screens/customer/RatingScreen';
+import { VehiclesScreen } from '../screens/customer/VehiclesScreen';
+import { VehicleFormScreen } from '../screens/customer/VehicleFormScreen';
 import { CustomerStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -17,6 +19,8 @@ export function CustomerRoot() {
       <Stack.Screen name="Searching" component={SearchingScreen} />
       <Stack.Screen name="Tracking" component={TrackingScreen} />
       <Stack.Screen name="Rating" component={RatingScreen} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="Vehicles" component={VehiclesScreen} />
+      <Stack.Screen name="VehicleForm" component={VehicleFormScreen} />
     </Stack.Navigator>
   );
 }
