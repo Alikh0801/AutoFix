@@ -8,8 +8,7 @@ insert into service_categories (id, title, subtitle, icon, min_price, sort_order
   ('tire',    'Təkər',        'Hava, dəyişmə, deşik',        'disc',              5, 2),
   ('fuel',    'Yanacaq',      'Benzin / dizel çatdırılması', 'droplet',          10, 3),
   ('lockout', 'Açar qalıb',   'Qapı açılması',               'key',               5, 4),
-  ('tow',     'Evakuator',    'Çəkdirmə xidməti',            'truck',            20, 5),
-  ('other',   'Digər',        'Başqa problem təsvir et',     'tool',              0, 6)
+  ('other',   'Digər',        'Başqa problem təsvir et',     'tool',              0, 5)
 on conflict (id) do update set
   title = excluded.title,
   subtitle = excluded.subtitle,
