@@ -1,20 +1,18 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { fetchMyVehicles, vehicleLine, Vehicle } from '../../lib/api';
+import { CustomerStackParamList } from '../../navigation/types';
 
-const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
-  { icon: 'truck', label: 'Avtomobillərim' },
-  { icon: 'credit-card', label: 'Ödəniş üsulları' },
-  { icon: 'bell', label: 'Bildirişlər' },
-  { icon: 'help-circle', label: 'Dəstək' },
-  { icon: 'file-text', label: 'Şərtlər və məxfilik' },
-];
+type Nav = NativeStackNavigationProp<CustomerStackParamList>;
 
 function initials(name: string | null | undefined): string {
   if (!name) return '👤';
@@ -29,6 +27,26 @@ function initials(name: string | null | undefined): string {
 export function CustomerProfileScreen() {
   const { resetApp, setRole } = useApp();
   const { signOut, profile } = useAuth();
+  const navigation = useNavigation<Nav>();
+  const [defaultVehicle, setDefaultVehicle] = useState<Vehicle | null>(null);
+
+  // Refresh the primary vehicle whenever the profile tab regains focus (e.g.
+  // after adding/editing a car), so the card always mirrors real data.
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyVehicles()
+        .then((vs) => setDefaultVehicle(vs.find((v) => v.isDefault) ?? vs[0] ?? null))
+        .catch(() => {});
+    }, [])
+  );
+
+  const menuItems: { icon: keyof typeof Feather.glyphMap; label: string; onPress?: () => void }[] = [
+    { icon: 'truck', label: 'Avtomobillərim', onPress: () => navigation.navigate('Vehicles') },
+    { icon: 'credit-card', label: 'Ödəniş üsulları' },
+    { icon: 'bell', label: 'Bildirişlər' },
+    { icon: 'help-circle', label: 'Dəstək' },
+    { icon: 'file-text', label: 'Şərtlər və məxfilik' },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -45,12 +63,17 @@ export function CustomerProfileScreen() {
           </View>
         </View>
 
-        <Card style={styles.vehicleCard}>
-          <View style={styles.vehicleRow}>
-            <Feather name="truck" size={16} color={colors.amber} />
-            <Text style={styles.vehicleText}>Toyota Corolla · Ağ · 10-AB-777</Text>
-          </View>
-        </Card>
+        <Pressable onPress={() => navigation.navigate('Vehicles')}>
+          <Card style={styles.vehicleCard}>
+            <View style={styles.vehicleRow}>
+              <Feather name="truck" size={16} color={defaultVehicle ? colors.amber : colors.textFaint} />
+              <Text style={[styles.vehicleText, !defaultVehicle && styles.vehicleTextEmpty]} numberOfLines={1}>
+                {defaultVehicle ? vehicleLine(defaultVehicle) : 'Avtomobil əlavə et'}
+              </Text>
+              <Feather name="chevron-right" size={16} color={colors.textFaint} />
+            </View>
+          </Card>
+        </Pressable>
 
         <Pressable style={styles.switchCard} onPress={() => setRole('provider')}>
           <View style={styles.switchIcon}>
@@ -65,7 +88,7 @@ export function CustomerProfileScreen() {
 
         <View style={styles.menu}>
           {menuItems.map((item) => (
-            <Pressable key={item.label} style={styles.menuRow}>
+            <Pressable key={item.label} style={styles.menuRow} onPress={item.onPress}>
               <View style={styles.menuIcon}>
                 <Feather name={item.icon} size={16} color={colors.textDim} />
               </View>
@@ -108,7 +131,8 @@ const styles = StyleSheet.create({
   phone: { fontFamily: fonts.body, fontSize: 13, color: colors.textDim, marginTop: 2 },
   vehicleCard: { marginBottom: 16 },
   vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  vehicleText: { fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  vehicleText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  vehicleTextEmpty: { color: colors.textDim },
   switchCard: {
     flexDirection: 'row',
     alignItems: 'center',

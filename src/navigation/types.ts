@@ -1,4 +1,5 @@
 import { ServiceCategoryId } from '../data/mock';
+import { Vehicle } from '../lib/api';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -12,6 +13,8 @@ export type CustomerStackParamList = {
   Searching: { category: ServiceCategoryId; note: string };
   Tracking: undefined;
   Rating: undefined;
+  Vehicles: undefined;
+  VehicleForm: { vehicle?: Vehicle } | undefined;
 };
 
 export type CustomerTabParamList = {

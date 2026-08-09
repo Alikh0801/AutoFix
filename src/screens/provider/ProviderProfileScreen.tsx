@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
@@ -9,6 +10,7 @@ import { RatingStars } from '../../components/RatingStars';
 import { serviceCategories } from '../../data/mock';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { fetchMyVehicles, vehicleLine, Vehicle } from '../../lib/api';
 
 const skills = ['battery', 'tire', 'lockout'] as const;
 
@@ -32,6 +34,16 @@ function initials(name: string | null | undefined): string {
 export function ProviderProfileScreen() {
   const { resetApp, setRole } = useApp();
   const { signOut, profile } = useAuth();
+  const [defaultVehicle, setDefaultVehicle] = useState<Vehicle | null>(null);
+
+  // Same account as the customer side, so show that same primary vehicle here.
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyVehicles()
+        .then((vs) => setDefaultVehicle(vs.find((v) => v.isDefault) ?? vs[0] ?? null))
+        .catch(() => {});
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -66,8 +78,10 @@ export function ProviderProfileScreen() {
 
         <Card style={styles.vehicleCard}>
           <View style={styles.vehicleRow}>
-            <Feather name="truck" size={16} color={colors.amber} />
-            <Text style={styles.vehicleText}>VW Transporter · 10-AA-221</Text>
+            <Feather name="truck" size={16} color={defaultVehicle ? colors.amber : colors.textFaint} />
+            <Text style={[styles.vehicleText, !defaultVehicle && styles.vehicleTextEmpty]} numberOfLines={1}>
+              {defaultVehicle ? vehicleLine(defaultVehicle) : 'Avtomobil əlavə edilməyib'}
+            </Text>
           </View>
         </Card>
 
@@ -140,7 +154,8 @@ const styles = StyleSheet.create({
   skillText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.amber },
   vehicleCard: { marginBottom: 16 },
   vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  vehicleText: { fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  vehicleText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  vehicleTextEmpty: { color: colors.textDim },
   switchCard: {
     flexDirection: 'row',
     alignItems: 'center',
