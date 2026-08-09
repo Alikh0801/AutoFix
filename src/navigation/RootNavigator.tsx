@@ -5,13 +5,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { navigationRef } from './navigationRef';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
-import { RoleSelectScreen } from '../screens/auth/RoleSelectScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { CustomerRoot } from './CustomerRoot';
 import { ProviderRoot } from './ProviderRoot';
 import { RootStackParamList } from './types';
 import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,8 +27,19 @@ const navTheme = {
   },
 };
 
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export function RootNavigator() {
   const { initializing, session } = useAuth();
+  const { role } = useApp();
 
   if (initializing) {
     return (
@@ -38,20 +49,17 @@ export function RootNavigator() {
     );
   }
 
-  // Returning users with a saved session skip onboarding and go straight to
-  // role selection (mode pick), then into the app without logging in again.
-  const initialRoute = session ? 'RoleSelect' : 'Onboarding';
-
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme}>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="CustomerRoot" component={CustomerRoot} />
-        <Stack.Screen name="ProviderRoot" component={ProviderRoot} />
-      </Stack.Navigator>
+      {!session ? (
+        // Single, unified sign-up / sign-in — no role chosen up front.
+        <AuthStack />
+      ) : role === 'provider' ? (
+        // The in-app mode switch flips role, swapping the whole root navigator.
+        <ProviderRoot />
+      ) : (
+        <CustomerRoot />
+      )}
     </NavigationContainer>
   );
 }

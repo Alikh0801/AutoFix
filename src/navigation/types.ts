@@ -2,11 +2,8 @@ import { ServiceCategoryId } from '../data/mock';
 
 export type RootStackParamList = {
   Onboarding: undefined;
-  RoleSelect: undefined;
   Login: undefined;
   Register: undefined;
-  CustomerRoot: undefined;
-  ProviderRoot: undefined;
 };
 
 export type CustomerStackParamList = {

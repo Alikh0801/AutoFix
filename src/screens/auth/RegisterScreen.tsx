@@ -7,7 +7,6 @@ import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { LogoMark } from '../../components/Logo';
 import { RootStackParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { AZ_DIAL_CODE, formatAzLocal, sanitizeAzLocal, validateAzPhone } from '../../lib/phone';
@@ -16,7 +15,6 @@ import { mapAuthError } from './LoginScreen';
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
-  const { role } = useApp();
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,14 +45,10 @@ export function RegisterScreen({ navigation }: Props) {
         return;
       }
 
+      // On success the session updates and RootNavigator swaps to the app.
       await signUp(email, password, fullName, phone.e164!);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: role === 'provider' ? 'ProviderRoot' : 'CustomerRoot' }],
-      });
     } catch (e: any) {
       setError(mapAuthError(e?.message));
-    } finally {
       setLoading(false);
     }
   };
@@ -66,7 +60,7 @@ export function RegisterScreen({ navigation }: Props) {
           <LogoMark size={40} />
           <Text style={styles.title}>Hesab yarat</Text>
           <Text style={styles.subtitle}>
-            {role === 'provider' ? 'Usta kimi qoşul və qazanmağa başla' : 'Bir neçə saniyədə qeydiyyatdan keç'}
+            Bir neçə saniyədə qeydiyyatdan keç
           </Text>
 
           <Text style={styles.label}>Ad, soyad</Text>

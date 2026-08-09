@@ -81,7 +81,7 @@ export function OnboardingScreen({ navigation }: Props) {
           label={isLast ? 'Başla' : 'İrəli'}
           onPress={() => {
             if (isLast) {
-              navigation.replace('RoleSelect');
+              navigation.replace('Login');
             } else {
               listRef.current?.scrollToIndex({ index: index + 1 });
             }
@@ -91,7 +91,7 @@ export function OnboardingScreen({ navigation }: Props) {
           <Button
             label="Keç"
             variant="ghost"
-            onPress={() => navigation.replace('RoleSelect')}
+            onPress={() => navigation.replace('Login')}
             style={{ marginTop: 10 }}
           />
         )}

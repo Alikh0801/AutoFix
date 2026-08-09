@@ -10,8 +10,11 @@ interface ActiveRequest {
 }
 
 interface AppContextValue {
-  role: Role | null;
+  // Which mode the user is currently acting in. Every account can be both a
+  // customer and a provider and flip between them inside the app.
+  role: Role;
   setRole: (role: Role) => void;
+  toggleRole: () => void;
   isOnline: boolean;
   setIsOnline: (v: boolean) => void;
   activeRequest: ActiveRequest | null;
@@ -23,7 +26,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<Role>('customer');
   const [isOnline, setIsOnline] = useState(true);
   const [activeRequest, setActiveRequest] = useState<ActiveRequest | null>(null);
 
@@ -31,6 +34,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     () => ({
       role,
       setRole,
+      toggleRole: () => setRole((r) => (r === 'customer' ? 'provider' : 'customer')),
       isOnline,
       setIsOnline,
       activeRequest,
@@ -40,7 +44,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       clearRequest: () => setActiveRequest(null),
       resetApp: () => {
-        setRole(null);
+        setRole('customer');
         setActiveRequest(null);
       },
     }),

@@ -7,13 +7,11 @@ import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { LogoMark } from '../../components/Logo';
 import { RootStackParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
-  const { role } = useApp();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,14 +22,10 @@ export function LoginScreen({ navigation }: Props) {
     setError(null);
     setLoading(true);
     try {
+      // On success the session updates and RootNavigator swaps to the app.
       await signIn(email, password);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: role === 'provider' ? 'ProviderRoot' : 'CustomerRoot' }],
-      });
     } catch (e: any) {
       setError(mapAuthError(e?.message));
-    } finally {
       setLoading(false);
     }
   };

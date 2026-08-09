@@ -7,7 +7,6 @@ import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { resetToRoleSelect } from '../../navigation/navigationRef';
 
 const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { icon: 'truck', label: 'Avtomobillərim' },
@@ -18,7 +17,7 @@ const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
 ];
 
 export function CustomerProfileScreen() {
-  const { resetApp } = useApp();
+  const { resetApp, setRole } = useApp();
   const { signOut } = useAuth();
 
   return (
@@ -43,6 +42,17 @@ export function CustomerProfileScreen() {
           </View>
         </Card>
 
+        <Pressable style={styles.switchCard} onPress={() => setRole('provider')}>
+          <View style={styles.switchIcon}>
+            <Feather name="tool" size={18} color={colors.amber} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.switchTitle}>Usta rejiminə keç</Text>
+            <Text style={styles.switchDesc}>Yaxınlıqdakı sifarişlərə təklif ver və qazan</Text>
+          </View>
+          <Feather name="arrow-right" size={18} color={colors.amber} />
+        </Pressable>
+
         <View style={styles.menu}>
           {menuItems.map((item) => (
             <Pressable key={item.label} style={styles.menuRow}>
@@ -60,7 +70,6 @@ export function CustomerProfileScreen() {
           onPress={async () => {
             await signOut();
             resetApp();
-            resetToRoleSelect();
           }}
         >
           <Feather name="log-out" size={16} color={colors.danger} />
@@ -87,9 +96,30 @@ const styles = StyleSheet.create({
   avatarText: { fontFamily: fonts.heading, fontSize: 18, color: colors.bg },
   name: { fontFamily: fonts.headingMedium, fontSize: 17, color: colors.cream },
   phone: { fontFamily: fonts.body, fontSize: 13, color: colors.textDim, marginTop: 2 },
-  vehicleCard: { marginBottom: 20 },
+  vehicleCard: { marginBottom: 16 },
   vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   vehicleText: { fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  switchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+  },
+  switchIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchTitle: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.cream },
+  switchDesc: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
   menu: { gap: 2, marginBottom: 24 },
   menuRow: {
     flexDirection: 'row',
