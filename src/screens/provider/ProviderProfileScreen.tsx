@@ -19,9 +19,19 @@ const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { icon: 'help-circle', label: 'Dəstək' },
 ];
 
+function initials(name: string | null | undefined): string {
+  if (!name) return '👤';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function ProviderProfileScreen() {
   const { resetApp, setRole } = useApp();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -30,13 +40,13 @@ export function ProviderProfileScreen() {
 
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>RƏ</Text>
+            <Text style={styles.avatarText}>{initials(profile?.fullName)}</Text>
           </View>
           <View>
-            <Text style={styles.name}>Rəşad Əliyev</Text>
+            <Text style={styles.name}>{profile?.fullName || 'Usta'}</Text>
             <View style={styles.ratingRow}>
               <RatingStars value={5} size={13} />
-              <Text style={styles.ratingText}>4.9 · 312 iş</Text>
+              <Text style={styles.ratingText}>Yeni</Text>
             </View>
           </View>
         </View>

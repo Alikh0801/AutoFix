@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -10,7 +10,7 @@ import { fonts, type } from '../../theme/typography';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
 import { ServiceCategoryCard } from '../../components/ServiceCategoryCard';
-import { serviceCategories } from '../../data/mock';
+import { useCategories } from '../../context/CategoriesContext';
 import { CustomerStackParamList, CustomerTabParamList } from '../../navigation/types';
 
 type Props = CompositeScreenProps<
@@ -19,6 +19,7 @@ type Props = CompositeScreenProps<
 >;
 
 export function HomeScreen({ navigation }: Props) {
+  const { categories, loading } = useCategories();
   return (
     <View style={styles.container}>
       <MapMock style={styles.map}>
@@ -43,19 +44,25 @@ export function HomeScreen({ navigation }: Props) {
         <Text style={styles.sheetTitle}>Nə probleminiz var?</Text>
         <Text style={styles.sheetSubtitle}>Problemi seç, ən yaxın usta 60 saniyə ərzində tapılsın</Text>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryRow}
-        >
-          {serviceCategories.map((cat) => (
-            <ServiceCategoryCard
-              key={cat.id}
-              category={cat}
-              onPress={() => navigation.navigate('RequestDetails', { category: cat.id })}
-            />
-          ))}
-        </ScrollView>
+        {loading && categories.length === 0 ? (
+          <View style={styles.categoryLoading}>
+            <ActivityIndicator color={colors.amber} />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {categories.map((cat) => (
+              <ServiceCategoryCard
+                key={cat.id}
+                category={cat}
+                onPress={() => navigation.navigate('RequestDetails', { category: cat.id })}
+              />
+            ))}
+          </ScrollView>
+        )}
 
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
@@ -132,6 +139,7 @@ const styles = StyleSheet.create({
   sheetTitle: { ...type.h2, marginBottom: 4 },
   sheetSubtitle: { ...type.bodyDim, fontSize: 13, marginBottom: 16 },
   categoryRow: { gap: 12, paddingRight: 8, paddingBottom: 4 },
+  categoryLoading: { height: 96, alignItems: 'center', justifyContent: 'center' },
   banner: {
     marginTop: 16,
     flexDirection: 'row',

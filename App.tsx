@@ -10,6 +10,7 @@ import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold } from '@expo-google
 import { colors } from './src/theme/colors';
 import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { CategoriesProvider } from './src/context/CategoriesContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -35,12 +36,14 @@ export default function App() {
     <GestureHandlerRootView style={styles.flex} onLayout={onLayout}>
       <SafeAreaProvider>
         <AuthProvider>
-          <AppProvider>
-            <View style={styles.flex}>
-              <StatusBar style="light" />
-              <RootNavigator />
-            </View>
-          </AppProvider>
+          <CategoriesProvider>
+            <AppProvider>
+              <View style={styles.flex}>
+                <StatusBar style="light" />
+                <RootNavigator />
+              </View>
+            </AppProvider>
+          </CategoriesProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

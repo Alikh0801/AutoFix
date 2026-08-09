@@ -16,9 +16,19 @@ const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { icon: 'file-text', label: 'Şərtlər və məxfilik' },
 ];
 
+function initials(name: string | null | undefined): string {
+  if (!name) return '👤';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function CustomerProfileScreen() {
   const { resetApp, setRole } = useApp();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -27,11 +37,11 @@ export function CustomerProfileScreen() {
 
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>NC</Text>
+            <Text style={styles.avatarText}>{initials(profile?.fullName)}</Text>
           </View>
           <View>
-            <Text style={styles.name}>Nihad Cəfərov</Text>
-            <Text style={styles.phone}>+994 50 123 45 67</Text>
+            <Text style={styles.name}>{profile?.fullName || 'İstifadəçi'}</Text>
+            <Text style={styles.phone}>{profile?.phone || '—'}</Text>
           </View>
         </View>
 
