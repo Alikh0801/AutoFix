@@ -11,6 +11,7 @@ import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
 import { ServiceCategoryCard } from '../../components/ServiceCategoryCard';
 import { useCategories } from '../../context/CategoriesContext';
+import { useLocation } from '../../context/LocationContext';
 import { CustomerStackParamList, CustomerTabParamList } from '../../navigation/types';
 
 type Props = CompositeScreenProps<
@@ -20,6 +21,16 @@ type Props = CompositeScreenProps<
 
 export function HomeScreen({ navigation }: Props) {
   const { categories, loading } = useCategories();
+  const { location, loading: locLoading, denied } = useLocation();
+
+  const locationText = denied
+    ? 'Yer icazəsi lazımdır'
+    : location
+    ? [location.address, location.city].filter(Boolean).join(', ') || 'Cari yer'
+    : locLoading
+    ? 'Yer alınır…'
+    : 'Yer təyin olunmayıb';
+
   return (
     <View style={styles.container}>
       <MapMock style={styles.map}>
@@ -30,7 +41,7 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.locationChip}>
             <Feather name="map-pin" size={13} color={colors.amber} />
             <Text style={styles.locationText} numberOfLines={1}>
-              Nizami küç. 118, Bakı
+              {locationText}
             </Text>
           </View>
           <Pressable style={styles.avatarChip}>

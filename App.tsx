@@ -11,6 +11,7 @@ import { colors } from './src/theme/colors';
 import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
+import { LocationProvider } from './src/context/LocationContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,14 +37,16 @@ export default function App() {
     <GestureHandlerRootView style={styles.flex} onLayout={onLayout}>
       <SafeAreaProvider>
         <AuthProvider>
-          <CategoriesProvider>
-            <AppProvider>
-              <View style={styles.flex}>
-                <StatusBar style="light" />
-                <RootNavigator />
-              </View>
-            </AppProvider>
-          </CategoriesProvider>
+          <LocationProvider>
+            <CategoriesProvider>
+              <AppProvider>
+                <View style={styles.flex}>
+                  <StatusBar style="light" />
+                  <RootNavigator />
+                </View>
+              </AppProvider>
+            </CategoriesProvider>
+          </LocationProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

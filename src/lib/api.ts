@@ -146,6 +146,64 @@ export async function deleteVehicle(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// --- Creating / tracking a request ------------------------------------------
+
+export interface CreateRequestInput {
+  category: ServiceCategoryId;
+  lat: number;
+  lng: number;
+  address?: string | null;
+  note?: string;
+  paymentMethod: 'cash' | 'card';
+  city?: string | null;
+}
+
+/** Create a help request from GPS coordinates. Returns the new request id. */
+export async function createRequest(input: CreateRequestInput): Promise<string> {
+  const { data, error } = await supabase.rpc('create_request', {
+    p_category: input.category,
+    p_lat: input.lat,
+    p_lng: input.lng,
+    p_address: input.address ?? null,
+    p_note: input.note ?? null,
+    p_payment_method: input.paymentMethod,
+    p_city: input.city ?? null,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function cancelRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('requests')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export interface RequestOffer {
+  id: string;
+  providerId: string;
+  price: number;
+  status: 'pending' | 'accepted' | 'closed' | 'withdrawn';
+}
+
+/** Offers placed on one of the customer's requests. */
+export async function fetchRequestOffers(requestId: string): Promise<RequestOffer[]> {
+  const { data, error } = await supabase
+    .from('offers')
+    .select('id, provider_id, price, status')
+    .eq('request_id', requestId)
+    .order('price', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((o) => ({
+    id: o.id,
+    providerId: o.provider_id,
+    price: Number(o.price),
+    status: o.status,
+  }));
+}
+
 // --- Orders -----------------------------------------------------------------
 
 export interface OrderHistoryItem {
