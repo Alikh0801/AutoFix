@@ -11,8 +11,8 @@ export type CustomerStackParamList = {
   CustomerTabs: undefined;
   RequestDetails: { category: ServiceCategoryId };
   Searching: { requestId: string; category: ServiceCategoryId };
-  Tracking: undefined;
-  Rating: undefined;
+  Tracking: { requestId: string };
+  Rating: { requestId: string; rateeLabel: string };
   Vehicles: undefined;
   VehicleForm: { vehicle?: Vehicle } | undefined;
 };
@@ -27,6 +27,7 @@ export type ProviderStackParamList = {
   ProviderTabs: undefined;
   IncomingRequest: { request: ProviderFeedItem };
   ActiveJob: { requestId: string };
+  Rating: { requestId: string; rateeLabel: string };
   ProviderServices: undefined;
 };
 

@@ -207,6 +207,103 @@ export async function fetchRequestOffers(requestId: string): Promise<RequestOffe
   }));
 }
 
+// --- Accepted-job lifecycle -------------------------------------------------
+
+/** Customer accepts one offer; that provider is assigned, others closed. */
+export async function acceptOffer(offerId: string): Promise<void> {
+  const { error } = await supabase.rpc('accept_offer', { p_offer_id: offerId });
+  if (error) throw error;
+}
+
+export interface RequestDetail {
+  id: string;
+  status: RequestStatus;
+  categoryId: ServiceCategoryId;
+  agreedPrice: number | null;
+  paymentMethod: 'cash' | 'card';
+  pickupLat: number | null;
+  pickupLng: number | null;
+  providerId: string | null;
+  providerName: string | null;
+  providerRating: number;
+  providerRatingCount: number;
+  providerLat: number | null;
+  providerLng: number | null;
+}
+
+export async function fetchRequestDetail(requestId: string): Promise<RequestDetail | null> {
+  const { data, error } = await supabase.rpc('request_detail', { p_request_id: requestId });
+  if (error) throw error;
+  const r = (data ?? [])[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    status: r.status as RequestStatus,
+    categoryId: r.category_id as ServiceCategoryId,
+    agreedPrice: r.agreed_price != null ? Number(r.agreed_price) : null,
+    paymentMethod: r.payment_method as 'cash' | 'card',
+    pickupLat: r.pickup_lat != null ? Number(r.pickup_lat) : null,
+    pickupLng: r.pickup_lng != null ? Number(r.pickup_lng) : null,
+    providerId: r.provider_id,
+    providerName: r.provider_name,
+    providerRating: r.provider_rating != null ? Number(r.provider_rating) : 0,
+    providerRatingCount: r.provider_rating_cnt ?? 0,
+    providerLat: r.provider_lat != null ? Number(r.provider_lat) : null,
+    providerLng: r.provider_lng != null ? Number(r.provider_lng) : null,
+  };
+}
+
+export interface ActiveJob {
+  id: string;
+  status: RequestStatus;
+  categoryId: ServiceCategoryId;
+  agreedPrice: number | null;
+  paymentMethod: 'cash' | 'card';
+  address: string | null;
+  note: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  customerName: string | null;
+}
+
+export async function fetchMyActiveJob(): Promise<ActiveJob | null> {
+  const { data, error } = await supabase.rpc('my_active_job');
+  if (error) throw error;
+  const r = (data ?? [])[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    status: r.status as RequestStatus,
+    categoryId: r.category_id as ServiceCategoryId,
+    agreedPrice: r.agreed_price != null ? Number(r.agreed_price) : null,
+    paymentMethod: r.payment_method as 'cash' | 'card',
+    address: r.address_text,
+    note: r.note,
+    pickupLat: r.pickup_lat != null ? Number(r.pickup_lat) : null,
+    pickupLng: r.pickup_lng != null ? Number(r.pickup_lng) : null,
+    customerName: r.customer_name,
+  };
+}
+
+export async function advanceJob(requestId: string, status: 'en_route' | 'arrived' | 'in_progress'): Promise<void> {
+  const { error } = await supabase.rpc('advance_job', { p_request_id: requestId, p_status: status });
+  if (error) throw error;
+}
+
+export async function completeJob(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('complete_request', { p_request_id: requestId });
+  if (error) throw error;
+}
+
+export async function submitRating(requestId: string, stars: number, comment?: string): Promise<void> {
+  const { error } = await supabase.rpc('submit_rating', {
+    p_request_id: requestId,
+    p_stars: stars,
+    p_comment: comment ?? null,
+  });
+  if (error) throw error;
+}
+
 // --- Orders -----------------------------------------------------------------
 
 export interface OrderHistoryItem {

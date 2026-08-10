@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Linking, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Linking, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,47 +10,93 @@ import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
 import { StatusStepper } from '../../components/StatusStepper';
-import { providerFeed, serviceCategories, OrderStatus } from '../../data/mock';
+import { useCategories } from '../../context/CategoriesContext';
+import {
+  fetchMyActiveJob,
+  advanceJob,
+  completeJob,
+  setProviderStatus,
+  ActiveJob,
+  RequestStatus,
+} from '../../lib/api';
+import { getCurrentLocation } from '../../lib/location';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ActiveJob'>;
 
-const flow: OrderStatus[] = ['accepted', 'en_route', 'arrived', 'in_progress', 'completed'];
-const nextActionLabel: Record<OrderStatus, string> = {
-  searching: '',
-  accepted: 'Yola çıxdım',
-  en_route: 'Məkana çatdım',
-  arrived: 'Təmirə başladım',
-  in_progress: 'İşi tamamladım',
-  completed: '',
-  cancelled: '',
+const nextStep: Partial<Record<RequestStatus, { label: string; to: 'en_route' | 'arrived' | 'in_progress' }>> = {
+  accepted: { label: 'Yola çıxdım', to: 'en_route' },
+  en_route: { label: 'Məkana çatdım', to: 'arrived' },
+  arrived: { label: 'Təmirə başladım', to: 'in_progress' },
 };
 
-export function ActiveJobScreen({ route, navigation }: Props) {
-  const request = providerFeed.find((r) => r.id === route.params.requestId)!;
-  const category = serviceCategories.find((c) => c.id === request.category)!;
-  const [statusIndex, setStatusIndex] = useState(0);
-  const status = flow[statusIndex];
+export function ActiveJobScreen({ navigation }: Props) {
+  const { getCategory } = useCategories();
+  const [job, setJob] = useState<ActiveJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  if (status === 'completed') {
+  const load = () => fetchMyActiveJob().then(setJob).catch(() => {}).finally(() => setLoading(false));
+
+  useEffect(() => {
+    load();
+    const poll = setInterval(load, 5000);
+    // Stream the provider's live position so the customer sees them approach.
+    const pushLocation = () =>
+      getCurrentLocation()
+        .then((loc) => setProviderStatus(true, loc.lat, loc.lng))
+        .catch(() => {});
+    pushLocation();
+    const loc = setInterval(pushLocation, 10000);
+    return () => {
+      clearInterval(poll);
+      clearInterval(loc);
+    };
+  }, []);
+
+  if (loading) {
     return (
-      <SafeAreaView style={styles.doneContainer}>
-        <View style={styles.doneCircle}>
-          <Feather name="check" size={30} color={colors.success} />
-        </View>
-        <Text style={styles.doneTitle}>İş tamamlandı</Text>
-        <Text style={styles.doneSubtitle}>{request.customerName} üçün {category.title.toLowerCase()} işi bağlandı</Text>
-
-        <Card style={styles.earningCard}>
-          <Text style={styles.earningLabel}>Qazanc</Text>
-          <Text style={styles.earningValue}>{request.offer}</Text>
-        </Card>
-
-        <View style={{ flex: 1 }} />
-        <Button label="Panelə qayıt" onPress={() => navigation.replace('ProviderTabs')} />
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator color={colors.amber} />
       </SafeAreaView>
     );
   }
+
+  if (!job) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <Feather name="check-circle" size={28} color={colors.success} />
+        <Text style={styles.emptyText}>Aktiv iş yoxdur</Text>
+        <Button label="Panelə qayıt" onPress={() => navigation.replace('ProviderTabs')} style={{ marginTop: 16 }} />
+      </SafeAreaView>
+    );
+  }
+
+  const category = getCategory(job.categoryId);
+  const step = nextStep[job.status];
+
+  const onAdvance = async () => {
+    if (!step) return;
+    setBusy(true);
+    try {
+      await advanceJob(job.id, step.to);
+      await load();
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onComplete = async () => {
+    setBusy(true);
+    try {
+      await completeJob(job.id);
+      navigation.replace('Rating', { requestId: job.id, rateeLabel: job.customerName ?? 'Müştəri' });
+    } catch (e) {
+      setBusy(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -66,38 +112,49 @@ export function ActiveJobScreen({ route, navigation }: Props) {
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
           <View style={styles.sheetHandle} />
-          <StatusStepper current={status} />
+          <StatusStepper current={job.status as any} />
 
           <Card>
             <View style={styles.row}>
               <View style={styles.icon}>
-                <Feather name={category.icon as any} size={18} color={colors.amber} />
+                <Feather name={(category?.icon as any) ?? 'tool'} size={18} color={colors.amber} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{request.customerName}</Text>
+                <Text style={styles.title}>{job.customerName ?? 'Müştəri'}</Text>
                 <Text style={styles.address} numberOfLines={1}>
-                  {request.address}
+                  {job.address ?? 'Ünvan göstərilməyib'}
                 </Text>
               </View>
-              <Pressable onPress={() => Linking.openURL('tel:+994501112233')} style={styles.callBtn}>
+              <Pressable onPress={() => Linking.openURL('tel:')} style={styles.callBtn}>
                 <Feather name="phone" size={16} color={colors.bg} />
               </Pressable>
             </View>
+            {job.note ? <Text style={styles.note}>{job.note}</Text> : null}
+            <View style={styles.divider} />
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>{category?.title ?? 'Xidmət'}</Text>
+              <Text style={styles.priceValue}>
+                {job.agreedPrice != null ? `${job.agreedPrice} AZN` : '—'} ·{' '}
+                {job.paymentMethod === 'card' ? 'Kart' : 'Nağd'}
+              </Text>
+            </View>
           </Card>
 
-          <Button
-            label={nextActionLabel[status]}
-            onPress={() => setStatusIndex((i) => Math.min(i + 1, flow.length - 1))}
-          />
+          {step ? (
+            <Button label={step.label} onPress={onAdvance} loading={busy} />
+          ) : (
+            <Button label="İşi tamamladım" onPress={onComplete} loading={busy} />
+          )}
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  emptyText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textDim, marginTop: 10 },
   map: { flex: 1 },
   pin: { position: 'absolute' },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
@@ -132,19 +189,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  doneContainer: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 24, paddingTop: 60, alignItems: 'center' },
-  doneCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.successSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  doneTitle: { ...type.h2, marginBottom: 8 },
-  doneSubtitle: { ...type.bodyDim, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 },
-  earningCard: { width: '100%', alignItems: 'center', paddingVertical: 22 },
-  earningLabel: { ...type.label, marginBottom: 8 },
-  earningValue: { fontFamily: fonts.heading, fontSize: 30, color: colors.amber },
+  note: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 12, lineHeight: 18 },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 14 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
+  priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
 });
