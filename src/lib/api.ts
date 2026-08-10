@@ -179,6 +179,48 @@ export async function fetchMyOrders(): Promise<OrderHistoryItem[]> {
   }));
 }
 
+// --- Provider profile & skills ----------------------------------------------
+
+/** Make the current user a provider (idempotent). The DB trigger also creates
+ *  their wallet row. Call before they manage skills / go online. */
+export async function ensureProviderProfile(): Promise<void> {
+  const uid = await requireUid();
+  const { error } = await supabase
+    .from('provider_profiles')
+    .upsert({ id: uid }, { onConflict: 'id', ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+/** Category ids the current provider has marked as their skills. */
+export async function fetchMyProviderSkills(): Promise<ServiceCategoryId[]> {
+  const uid = await requireUid();
+  // Skills are publicly readable, so scope to the current provider explicitly.
+  const { data, error } = await supabase
+    .from('provider_skills')
+    .select('category_id')
+    .eq('provider_id', uid);
+  if (error) throw error;
+  return (data ?? []).map((r) => r.category_id as ServiceCategoryId);
+}
+
+export async function addProviderSkill(categoryId: ServiceCategoryId): Promise<void> {
+  const uid = await requireUid();
+  const { error } = await supabase
+    .from('provider_skills')
+    .upsert({ provider_id: uid, category_id: categoryId }, { onConflict: 'provider_id,category_id', ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+export async function removeProviderSkill(categoryId: ServiceCategoryId): Promise<void> {
+  const uid = await requireUid();
+  const { error } = await supabase
+    .from('provider_skills')
+    .delete()
+    .eq('provider_id', uid)
+    .eq('category_id', categoryId);
+  if (error) throw error;
+}
+
 // --- Provider earnings ------------------------------------------------------
 
 export interface EarningsDay {

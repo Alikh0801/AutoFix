@@ -2,24 +2,20 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { RatingStars } from '../../components/RatingStars';
-import { serviceCategories } from '../../data/mock';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { fetchMyVehicles, vehicleLine, Vehicle } from '../../lib/api';
+import { useCategories } from '../../context/CategoriesContext';
+import { fetchMyVehicles, fetchMyProviderSkills, vehicleLine, Vehicle } from '../../lib/api';
+import { ServiceCategoryId } from '../../data/mock';
+import { ProviderStackParamList } from '../../navigation/types';
 
-const skills = ['battery', 'tire', 'lockout'] as const;
-
-const menuItems: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
-  { icon: 'briefcase', label: 'Xidmət növlərim' },
-  { icon: 'credit-card', label: 'Ödəniş məlumatları' },
-  { icon: 'file-text', label: 'Sənədlərim' },
-  { icon: 'help-circle', label: 'Dəstək' },
-];
+type Nav = NativeStackNavigationProp<ProviderStackParamList>;
 
 function initials(name: string | null | undefined): string {
   if (!name) return '👤';
@@ -34,16 +30,30 @@ function initials(name: string | null | undefined): string {
 export function ProviderProfileScreen() {
   const { resetApp, setRole } = useApp();
   const { signOut, profile } = useAuth();
+  const { getCategory } = useCategories();
+  const navigation = useNavigation<Nav>();
   const [defaultVehicle, setDefaultVehicle] = useState<Vehicle | null>(null);
+  const [skills, setSkills] = useState<ServiceCategoryId[]>([]);
 
-  // Same account as the customer side, so show that same primary vehicle here.
+  // Same account as the customer side, so show that same primary vehicle here;
+  // also refresh the selected service skills on focus.
   useFocusEffect(
     useCallback(() => {
       fetchMyVehicles()
         .then((vs) => setDefaultVehicle(vs.find((v) => v.isDefault) ?? vs[0] ?? null))
         .catch(() => {});
+      fetchMyProviderSkills()
+        .then(setSkills)
+        .catch(() => {});
     }, [])
   );
+
+  const menuItems: { icon: keyof typeof Feather.glyphMap; label: string; onPress?: () => void }[] = [
+    { icon: 'briefcase', label: 'Xidmət növlərim', onPress: () => navigation.navigate('ProviderServices') },
+    { icon: 'credit-card', label: 'Ödəniş məlumatları' },
+    { icon: 'file-text', label: 'Sənədlərim' },
+    { icon: 'help-circle', label: 'Dəstək' },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -64,17 +74,24 @@ export function ProviderProfileScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>Bacarıqlar</Text>
-        <View style={styles.skillsRow}>
-          {skills.map((s) => {
-            const category = serviceCategories.find((c) => c.id === s)!;
-            return (
-              <View key={s} style={styles.skillChip}>
-                <Feather name={category.icon as any} size={13} color={colors.amber} />
-                <Text style={styles.skillText}>{category.title}</Text>
-              </View>
-            );
-          })}
-        </View>
+        {skills.length === 0 ? (
+          <Pressable style={styles.skillsEmpty} onPress={() => navigation.navigate('ProviderServices')}>
+            <Text style={styles.skillsEmptyText}>Xidmət növü seçilməyib — seçmək üçün toxun</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.skillsRow}>
+            {skills.map((s) => {
+              const category = getCategory(s);
+              if (!category) return null;
+              return (
+                <View key={s} style={styles.skillChip}>
+                  <Feather name={category.icon as any} size={13} color={colors.amber} />
+                  <Text style={styles.skillText}>{category.title}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         <Card style={styles.vehicleCard}>
           <View style={styles.vehicleRow}>
@@ -98,7 +115,7 @@ export function ProviderProfileScreen() {
 
         <View style={styles.menu}>
           {menuItems.map((item) => (
-            <Pressable key={item.label} style={styles.menuRow}>
+            <Pressable key={item.label} style={styles.menuRow} onPress={item.onPress}>
               <View style={styles.menuIcon}>
                 <Feather name={item.icon} size={16} color={colors.textDim} />
               </View>
@@ -152,6 +169,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   skillText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.amber },
+  skillsEmpty: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 18,
+  },
+  skillsEmptyText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
   vehicleCard: { marginBottom: 16 },
   vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   vehicleText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },

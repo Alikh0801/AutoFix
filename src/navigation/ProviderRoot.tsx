@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProviderTabs } from './ProviderTabs';
 import { IncomingRequestScreen } from '../screens/provider/IncomingRequestScreen';
 import { ActiveJobScreen } from '../screens/provider/ActiveJobScreen';
+import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
 import { ProviderStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<ProviderStackParamList>();
@@ -17,6 +18,7 @@ export function ProviderRoot() {
         options={{ presentation: 'modal' }}
       />
       <Stack.Screen name="ActiveJob" component={ActiveJobScreen} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="ProviderServices" component={ProviderServicesScreen} />
     </Stack.Navigator>
   );
 }

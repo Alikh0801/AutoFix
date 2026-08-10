@@ -27,6 +27,7 @@ export type ProviderStackParamList = {
   ProviderTabs: undefined;
   IncomingRequest: { requestId: string };
   ActiveJob: { requestId: string };
+  ProviderServices: undefined;
 };
 
 export type ProviderTabParamList = {
