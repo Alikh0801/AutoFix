@@ -59,10 +59,11 @@ export function EarningsScreen() {
         onPress: async () => {
           setPaying(true);
           try {
-            await payCommissionFromWallet();
+            const res = await payCommissionFromWallet();
             await load();
-          } catch {
-            // ignore
+            Alert.alert('Ödənildi', `Komissiya borcu bağlandı. Balans: ${res.walletBalance} AZN`);
+          } catch (e: any) {
+            Alert.alert('Ödəniş alınmadı', e?.message ?? 'Xəta baş verdi. Yenidən cəhd et.');
           } finally {
             setPaying(false);
           }
