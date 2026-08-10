@@ -1,4 +1,4 @@
-export type ServiceCategoryId = 'battery' | 'tire' | 'fuel' | 'lockout' | 'other';
+export type ServiceCategoryId = 'battery' | 'tire' | 'fuel' | 'lockout' | 'diagnostics' | 'other';
 
 export interface ServiceCategory {
   id: ServiceCategoryId;
@@ -41,6 +41,14 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'key',
     avgPrice: '15-25 AZN',
     avgMinutes: 10,
+  },
+  {
+    id: 'diagnostics',
+    title: 'Diaqnostika',
+    subtitle: 'Nasazlığın yoxlanması',
+    icon: 'activity',
+    avgPrice: '10-20 AZN',
+    avgMinutes: 20,
   },
   {
     id: 'other',

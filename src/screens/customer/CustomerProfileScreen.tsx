@@ -80,7 +80,7 @@ export function CustomerProfileScreen() {
             <Feather name="tool" size={18} color={colors.amber} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchTitle}>Usta rejiminə keç</Text>
+            <Text style={styles.switchTitle}>Yol Yardımı rejiminə keç</Text>
             <Text style={styles.switchDesc}>Yaxınlıqdakı sifarişlərə təklif ver və qazan</Text>
           </View>
           <Feather name="arrow-right" size={18} color={colors.amber} />

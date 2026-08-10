@@ -13,6 +13,11 @@ import { MapPin } from '../../components/MapPin';
 import { providerFeed, serviceCategories } from '../../data/mock';
 import { ProviderStackParamList, ProviderTabParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+
+function firstName(name: string | null | undefined): string {
+  return name?.trim().split(/\s+/)[0] || 'Usta';
+}
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<ProviderTabParamList, 'Dashboard'>,
@@ -27,15 +32,16 @@ const feedPinPositions = [
 
 export function DashboardScreen({ navigation }: Props) {
   const { isOnline, setIsOnline } = useApp();
+  const { profile } = useAuth();
 
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.topWrap}>
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.greeting}>Salam, Rəşad</Text>
+            <Text style={styles.greeting}>Salam, {firstName(profile?.fullName)}</Text>
             <Text style={styles.status}>
-              {isOnline ? 'Aktivsən · sifarişlər görünür' : 'Passivsən · sifariş gəlmir'}
+              {isOnline ? 'Online' : 'Offline - sifariş almaq üçün aktiv rejimə keç'}
             </Text>
           </View>
           <View style={styles.onlineToggle}>
