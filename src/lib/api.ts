@@ -337,6 +337,17 @@ export async function fetchMyOrders(): Promise<OrderHistoryItem[]> {
   }));
 }
 
+/** TEST MODE: clear the provider's commission debt from their wallet balance. */
+export async function payCommissionFromWallet(): Promise<{ commissionBalance: number; walletBalance: number }> {
+  const { data, error } = await supabase.rpc('pay_commission_from_wallet');
+  if (error) throw error;
+  const r = (data ?? [])[0] ?? {};
+  return {
+    commissionBalance: Number(r.commission_balance ?? 0),
+    walletBalance: Number(r.wallet_balance ?? 0),
+  };
+}
+
 // --- Provider profile & skills ----------------------------------------------
 
 /** Make the current user a provider (idempotent). The DB trigger also creates
