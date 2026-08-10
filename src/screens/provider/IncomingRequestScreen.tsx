@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -24,6 +24,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   const handleOffer = async () => {
+    Keyboard.dismiss();
     setError(null);
     const value = Number(price);
     if (!value || value < minPrice) {
@@ -43,6 +44,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.container}>
+        <Pressable style={styles.dismissArea} onPress={() => Keyboard.dismiss()} accessible={false}>
         <View style={styles.grabber} />
         <Text style={styles.newBadge}>YENİ SORĞU</Text>
 
@@ -93,6 +95,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
           <Button label="İmtina" variant="secondary" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
           <Button label="Təklif ver" onPress={handleOffer} loading={submitting} style={{ flex: 2 }} />
         </View>
+        </Pressable>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -100,6 +103,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
+  dismissArea: { flex: 1 },
   grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 16 },
   newBadge: { ...type.label, color: colors.amber, textAlign: 'center', marginBottom: 12 },
   card: { marginBottom: 20 },
