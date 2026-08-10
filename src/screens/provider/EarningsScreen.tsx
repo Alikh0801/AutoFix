@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,7 +7,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
-import { fetchProviderEarnings, ProviderEarnings } from '../../lib/api';
+import { fetchProviderEarnings, payCommissionFromWallet, ProviderEarnings } from '../../lib/api';
 
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
@@ -23,6 +23,7 @@ export function EarningsScreen() {
   const { getCategory } = useCategories();
   const [data, setData] = useState<ProviderEarnings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -50,6 +51,26 @@ export function EarningsScreen() {
 
   const maxAmount = Math.max(1, ...data.weekByDay.map((d) => d.amount));
 
+  const handlePayCommission = () => {
+    Alert.alert('Komissiya borcu', `${data.commissionOwed} AZN balansdan ödənilsin?`, [
+      { text: 'Yox', style: 'cancel' },
+      {
+        text: 'Ödə',
+        onPress: async () => {
+          setPaying(true);
+          try {
+            await payCommissionFromWallet();
+            await load();
+          } catch {
+            // ignore
+          } finally {
+            setPaying(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -70,6 +91,19 @@ export function EarningsScreen() {
           </View>
         </Card>
 
+        {data.commissionOwed > 0 && (
+          <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
+            <View style={styles.debtIcon}>
+              <Feather name="alert-circle" size={16} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Komissiya borcu: {data.commissionOwed} AZN</Text>
+              <Text style={styles.debtSub}>Sifariş almaq üçün balansdan ödə</Text>
+            </View>
+            {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
+          </Pressable>
+        )}
+
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
             <Feather name="check-circle" size={16} color={colors.success} />
@@ -82,9 +116,9 @@ export function EarningsScreen() {
             <Text style={styles.statLabel}>Reytinq</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Feather name="alert-circle" size={16} color={data.commissionOwed > 0 ? colors.danger : colors.info} />
-            <Text style={styles.statValue}>{data.commissionOwed} AZN</Text>
-            <Text style={styles.statLabel}>Komissiya borcu</Text>
+            <Feather name="credit-card" size={16} color={colors.info} />
+            <Text style={styles.statValue}>{data.walletBalance} AZN</Text>
+            <Text style={styles.statLabel}>Balans</Text>
           </Card>
         </View>
 
@@ -138,6 +172,28 @@ const styles = StyleSheet.create({
   },
   barFill: { width: '100%', backgroundColor: colors.amber, borderRadius: 7 },
   barLabel: { fontFamily: fonts.body, fontSize: 10, color: colors.textFaint },
+  debtBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  debtIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debtTitle: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.cream },
+  debtSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 1 },
+  debtPay: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.amber },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16 },
   statValue: { fontFamily: fonts.headingMedium, fontSize: 16, color: colors.cream },
