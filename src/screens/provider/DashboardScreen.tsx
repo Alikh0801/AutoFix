@@ -152,7 +152,7 @@ export function DashboardScreen({ navigation }: Props) {
               const category = getCategory(item.categoryId);
               return (
                 <Pressable onPress={() => navigation.navigate('IncomingRequest', { request: item })}>
-                  <Card style={styles.reqCard}>
+                  <Card style={[styles.reqCard, item.myOfferPrice != null && styles.reqCardOffered]}>
                     <View style={styles.reqTop}>
                       <View style={styles.reqIcon}>
                         <Feather name={(category?.icon as any) ?? 'tool'} size={17} color={colors.amber} />
@@ -171,6 +171,12 @@ export function DashboardScreen({ navigation }: Props) {
                       <Text style={styles.reqDot}>·</Text>
                       <Text style={styles.reqMeta}>{minutesAgo(item.createdAt)}</Text>
                     </View>
+                    {item.myOfferPrice != null && (
+                      <View style={styles.offeredBadge}>
+                        <Feather name="check-circle" size={12} color={colors.success} />
+                        <Text style={styles.offeredText}>Təklif verildi · {item.myOfferPrice} AZN</Text>
+                      </View>
+                    )}
                   </Card>
                 </Pressable>
               );
@@ -231,6 +237,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   reqCard: { gap: 0 },
+  reqCardOffered: { borderColor: colors.amberDim },
+  offeredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderColor: colors.line,
+  },
+  offeredText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.success },
   reqTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   reqIcon: {
     width: 40,

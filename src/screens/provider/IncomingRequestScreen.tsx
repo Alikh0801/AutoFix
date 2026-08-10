@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,7 +18,7 @@ import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
-import { submitOffer } from '../../lib/api';
+import { submitOffer, withdrawOffer } from '../../lib/api';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'IncomingRequest'>;
@@ -18,10 +28,15 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
   const { getCategory } = useCategories();
   const category = getCategory(request.categoryId);
   const minPrice = category?.minPrice ?? 0;
+  const editing = request.myOfferPrice != null;
 
-  const [price, setPrice] = useState(minPrice ? String(minPrice) : '');
+  const [price, setPrice] = useState(
+    request.myOfferPrice != null ? String(request.myOfferPrice) : minPrice ? String(minPrice) : ''
+  );
+  const [note, setNote] = useState(request.myOfferNote ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const handleOffer = async () => {
     Keyboard.dismiss();
@@ -33,7 +48,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
     }
     setSubmitting(true);
     try {
-      await submitOffer(request.id, value);
+      await submitOffer(request.id, value, note);
       navigation.goBack();
     } catch (e: any) {
       setError(e?.message ?? 'Təklif göndərilmədi. Yenidən cəhd et.');
@@ -41,60 +56,110 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleWithdraw = () => {
+    Keyboard.dismiss();
+    Alert.alert('Təklifi ləğv et', 'Bu təklifi geri götürmək istəyirsən?', [
+      { text: 'Yox', style: 'cancel' },
+      {
+        text: 'Ləğv et',
+        style: 'destructive',
+        onPress: async () => {
+          setWithdrawing(true);
+          try {
+            await withdrawOffer(request.id);
+          } catch {
+            // ignore; go back regardless
+          }
+          navigation.goBack();
+        },
+      },
+    ]);
+  };
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.container}>
         <Pressable style={styles.dismissArea} onPress={() => Keyboard.dismiss()} accessible={false}>
-        <View style={styles.grabber} />
-        <Text style={styles.newBadge}>YENİ SORĞU</Text>
+          <View style={styles.grabber} />
+          <Text style={styles.newBadge}>{editing ? 'TƏKLİFİN' : 'YENİ SORĞU'}</Text>
 
-        <Card style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.icon}>
-              <Feather name={(category?.icon as any) ?? 'tool'} size={24} color={colors.amber} />
+          <Card style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.icon}>
+                <Feather name={(category?.icon as any) ?? 'tool'} size={24} color={colors.amber} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>{category?.title ?? 'Sorğu'}</Text>
+                <Text style={styles.distance}>{request.distanceKm} km məsafədə</Text>
+              </View>
+              <Text style={styles.pay}>{request.paymentMethod === 'card' ? 'Kart' : 'Nağd'}</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{category?.title ?? 'Sorğu'}</Text>
-              <Text style={styles.distance}>{request.distanceKm} km məsafədə</Text>
-            </View>
-            <Text style={styles.pay}>{request.paymentMethod === 'card' ? 'Kart' : 'Nağd'}</Text>
-          </View>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <View style={styles.infoRow}>
-            <Feather name="map-pin" size={14} color={colors.textDim} />
-            <Text style={styles.infoText}>{request.address ?? 'Ünvan göstərilməyib'}</Text>
-          </View>
-          {request.note ? (
             <View style={styles.infoRow}>
-              <Feather name="message-square" size={14} color={colors.textDim} />
-              <Text style={styles.infoText}>{request.note}</Text>
+              <Feather name="map-pin" size={14} color={colors.textDim} />
+              <Text style={styles.infoText}>{request.address ?? 'Ünvan göstərilməyib'}</Text>
             </View>
-          ) : null}
-        </Card>
+            {request.note ? (
+              <View style={styles.infoRow}>
+                <Feather name="message-square" size={14} color={colors.textDim} />
+                <Text style={styles.infoText}>{request.note}</Text>
+              </View>
+            ) : null}
+          </Card>
 
-        <Text style={styles.label}>Təklifin (AZN)</Text>
-        <View style={styles.priceRow}>
+          {editing && (
+            <View style={styles.editedBanner}>
+              <Feather name="check-circle" size={14} color={colors.success} />
+              <Text style={styles.editedText}>Bu sorğuya artıq təklif vermisən — redaktə edə bilərsən</Text>
+            </View>
+          )}
+
+          <Text style={styles.label}>Təklifin (AZN)</Text>
+          <View style={styles.priceRow}>
+            <TextInput
+              value={price}
+              onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              placeholder={`min ${minPrice}`}
+              placeholderTextColor={colors.textFaint}
+              style={styles.priceInput}
+            />
+            <Text style={styles.priceHint}>minimum {minPrice} AZN</Text>
+          </View>
+
+          <Text style={styles.label}>Təsvir (istəyə bağlı)</Text>
           <TextInput
-            value={price}
-            onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, ''))}
-            keyboardType="decimal-pad"
-            placeholder={`min ${minPrice}`}
+            value={note}
+            onChangeText={setNote}
+            placeholder="Məs: Yalnız 95 premium benzin var"
             placeholderTextColor={colors.textFaint}
-            style={styles.priceInput}
+            style={styles.noteInput}
+            multiline
           />
-          <Text style={styles.priceHint}>minimum {minPrice} AZN</Text>
-        </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text style={styles.error}>{error}</Text>}
 
-        <View style={{ flex: 1 }} />
+          <View style={{ flex: 1 }} />
 
-        <View style={styles.actions}>
-          <Button label="İmtina" variant="secondary" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
-          <Button label="Təklif ver" onPress={handleOffer} loading={submitting} style={{ flex: 2 }} />
-        </View>
+          {editing ? (
+            <View style={styles.actions}>
+              <Button
+                label="Təklifi ləğv et"
+                variant="danger"
+                onPress={handleWithdraw}
+                loading={withdrawing}
+                style={{ flex: 1 }}
+              />
+              <Button label="Yenilə" onPress={handleOffer} loading={submitting} style={{ flex: 1 }} />
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              <Button label="İmtina" variant="secondary" onPress={() => navigation.goBack()} style={{ flex: 1 }} />
+              <Button label="Təklif ver" onPress={handleOffer} loading={submitting} style={{ flex: 2 }} />
+            </View>
+          )}
         </Pressable>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -106,7 +171,7 @@ const styles = StyleSheet.create({
   dismissArea: { flex: 1 },
   grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 16 },
   newBadge: { ...type.label, color: colors.amber, textAlign: 'center', marginBottom: 12 },
-  card: { marginBottom: 20 },
+  card: { marginBottom: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   icon: {
     width: 52,
@@ -122,8 +187,18 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 16 },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   infoText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream, lineHeight: 19 },
-  label: { ...type.label, marginBottom: 8 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  editedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.successSoft,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  editedText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.cream },
+  label: { ...type.label, marginBottom: 8, marginTop: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   priceInput: {
     flex: 1,
     height: 54,
@@ -137,6 +212,18 @@ const styles = StyleSheet.create({
     color: colors.cream,
   },
   priceHint: { fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.textDim },
+  noteInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 16,
+    padding: 14,
+    minHeight: 64,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.cream,
+    textAlignVertical: 'top',
+  },
   error: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.danger, marginTop: 12 },
   actions: { flexDirection: 'row', gap: 12 },
 });

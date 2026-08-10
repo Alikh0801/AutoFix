@@ -105,11 +105,14 @@ export function SearchingScreen({ route, navigation }: Props) {
           ) : (
             <View style={styles.offerList}>
               {offers.map((o) => (
-                <Card key={o.id} style={styles.offerRow}>
-                  <Feather name="tool" size={15} color={colors.amber} />
-                  <Text style={styles.offerText}>Usta təklifi</Text>
-                  <View style={{ flex: 1 }} />
-                  <Text style={styles.offerPrice}>{o.price} AZN</Text>
+                <Card key={o.id} style={styles.offerCard}>
+                  <View style={styles.offerTop}>
+                    <Feather name="tool" size={15} color={colors.amber} />
+                    <Text style={styles.offerText}>Usta təklifi</Text>
+                    <View style={{ flex: 1 }} />
+                    <Text style={styles.offerPrice}>{o.price} AZN</Text>
+                  </View>
+                  {o.note ? <Text style={styles.offerNote}>{o.note}</Text> : null}
                 </Card>
               ))}
               <Text style={styles.offerHint}>Təklifi seçmək növbəti mərhələdə aktivləşəcək.</Text>
@@ -171,8 +174,10 @@ const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.amber },
   offerList: { alignSelf: 'stretch', gap: 8, marginBottom: 14 },
-  offerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  offerCard: { gap: 0 },
+  offerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   offerText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.cream },
+  offerNote: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 8, lineHeight: 18 },
   offerPrice: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
   offerHint: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint, textAlign: 'center', marginTop: 2 },
   cancelBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 },

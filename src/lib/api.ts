@@ -186,6 +186,7 @@ export interface RequestOffer {
   id: string;
   providerId: string;
   price: number;
+  note: string | null;
   status: 'pending' | 'accepted' | 'closed' | 'withdrawn';
 }
 
@@ -193,7 +194,7 @@ export interface RequestOffer {
 export async function fetchRequestOffers(requestId: string): Promise<RequestOffer[]> {
   const { data, error } = await supabase
     .from('offers')
-    .select('id, provider_id, price, status')
+    .select('id, provider_id, price, note, status')
     .eq('request_id', requestId)
     .order('price', { ascending: true });
   if (error) throw error;
@@ -201,6 +202,7 @@ export async function fetchRequestOffers(requestId: string): Promise<RequestOffe
     id: o.id,
     providerId: o.provider_id,
     price: Number(o.price),
+    note: o.note ?? null,
     status: o.status,
   }));
 }
@@ -299,6 +301,8 @@ export interface ProviderFeedItem {
   paymentMethod: 'cash' | 'card';
   distanceKm: number;
   createdAt: string;
+  myOfferPrice: number | null;
+  myOfferNote: string | null;
 }
 
 /** Nearby open requests matching the provider's skills, nearest first. */
@@ -313,12 +317,24 @@ export async function fetchProviderFeed(lat: number, lng: number, radiusM = 8000
     paymentMethod: r.payment_method as 'cash' | 'card',
     distanceKm: Math.round((Number(r.distance_m) / 1000) * 10) / 10,
     createdAt: r.created_at,
+    myOfferPrice: r.my_offer_price != null ? Number(r.my_offer_price) : null,
+    myOfferNote: r.my_offer_note ?? null,
   }));
 }
 
-/** Place (or update) the provider's bid on a request. */
-export async function submitOffer(requestId: string, price: number): Promise<void> {
-  const { error } = await supabase.rpc('submit_offer', { p_request_id: requestId, p_price: price });
+/** Place or edit the provider's bid on a request (optionally with a note). */
+export async function submitOffer(requestId: string, price: number, note?: string): Promise<void> {
+  const { error } = await supabase.rpc('submit_offer', {
+    p_request_id: requestId,
+    p_price: price,
+    p_note: note ?? null,
+  });
+  if (error) throw error;
+}
+
+/** Withdraw the provider's offer on a request. */
+export async function withdrawOffer(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('withdraw_offer', { p_request_id: requestId });
   if (error) throw error;
 }
 
