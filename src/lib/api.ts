@@ -31,6 +31,7 @@ export async function fetchServiceCategories(): Promise<ServiceCategory[]> {
     icon: row.icon ?? 'tool',
     avgPrice: `${Number(row.min_price)} AZN-dən`,
     avgMinutes: 15,
+    minPrice: Number(row.min_price),
   }));
 }
 
@@ -276,6 +277,48 @@ export async function removeProviderSkill(categoryId: ServiceCategoryId): Promis
     .delete()
     .eq('provider_id', uid)
     .eq('category_id', categoryId);
+  if (error) throw error;
+}
+
+// --- Provider feed & offers -------------------------------------------------
+
+export async function setProviderStatus(online: boolean, lat?: number, lng?: number): Promise<void> {
+  const { error } = await supabase.rpc('set_provider_status', {
+    p_online: online,
+    p_lat: lat ?? null,
+    p_lng: lng ?? null,
+  });
+  if (error) throw error;
+}
+
+export interface ProviderFeedItem {
+  id: string;
+  categoryId: ServiceCategoryId;
+  address: string | null;
+  note: string | null;
+  paymentMethod: 'cash' | 'card';
+  distanceKm: number;
+  createdAt: string;
+}
+
+/** Nearby open requests matching the provider's skills, nearest first. */
+export async function fetchProviderFeed(lat: number, lng: number, radiusM = 8000): Promise<ProviderFeedItem[]> {
+  const { data, error } = await supabase.rpc('provider_feed', { lat, lng, radius_m: radiusM });
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    categoryId: r.category_id as ServiceCategoryId,
+    address: r.address_text,
+    note: r.note,
+    paymentMethod: r.payment_method as 'cash' | 'card',
+    distanceKm: Math.round((Number(r.distance_m) / 1000) * 10) / 10,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Place (or update) the provider's bid on a request. */
+export async function submitOffer(requestId: string, price: number): Promise<void> {
+  const { error } = await supabase.rpc('submit_offer', { p_request_id: requestId, p_price: price });
   if (error) throw error;
 }
 
