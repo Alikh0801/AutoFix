@@ -1,5 +1,5 @@
 import { ServiceCategoryId } from '../data/mock';
-import { Vehicle } from '../lib/api';
+import { Vehicle, ProviderFeedItem } from '../lib/api';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -25,7 +25,7 @@ export type CustomerTabParamList = {
 
 export type ProviderStackParamList = {
   ProviderTabs: undefined;
-  IncomingRequest: { requestId: string };
+  IncomingRequest: { request: ProviderFeedItem };
   ActiveJob: { requestId: string };
   ProviderServices: undefined;
 };

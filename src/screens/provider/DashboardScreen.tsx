@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, FlatList, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Switch, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { CompositeScreenProps } from '@react-navigation/native';
+import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -10,13 +10,22 @@ import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
-import { providerFeed, serviceCategories } from '../../data/mock';
 import { ProviderStackParamList, ProviderTabParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCategories } from '../../context/CategoriesContext';
+import { useLocation } from '../../context/LocationContext';
+import { supabase } from '../../lib/supabase';
+import { fetchProviderFeed, setProviderStatus, ProviderFeedItem } from '../../lib/api';
 
 function firstName(name: string | null | undefined): string {
   return name?.trim().split(/\s+/)[0] || 'Usta';
+}
+
+function minutesAgo(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'indi';
+  return `${mins} dəq əvvəl`;
 }
 
 type Props = CompositeScreenProps<
@@ -33,6 +42,41 @@ const feedPinPositions = [
 export function DashboardScreen({ navigation }: Props) {
   const { isOnline, setIsOnline } = useApp();
   const { profile } = useAuth();
+  const { location } = useLocation();
+  const { getCategory } = useCategories();
+  const [feed, setFeed] = useState<ProviderFeedItem[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(false);
+
+  // Mirror online status + location to the DB.
+  useEffect(() => {
+    setProviderStatus(isOnline, location?.lat, location?.lng).catch(() => {});
+  }, [isOnline, location?.lat, location?.lng]);
+
+  const loadFeed = useCallback(() => {
+    if (!isOnline || !location) {
+      setFeed([]);
+      return;
+    }
+    setLoadingFeed(true);
+    fetchProviderFeed(location.lat, location.lng)
+      .then(setFeed)
+      .catch(() => {})
+      .finally(() => setLoadingFeed(false));
+  }, [isOnline, location]);
+
+  useFocusEffect(useCallback(() => loadFeed(), [loadFeed]));
+
+  // Refresh the feed live as requests appear / change.
+  useEffect(() => {
+    if (!isOnline) return;
+    const channel = supabase
+      .channel('provider-feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => loadFeed())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOnline, loadFeed]);
 
   return (
     <View style={styles.container}>
@@ -41,7 +85,7 @@ export function DashboardScreen({ navigation }: Props) {
           <View>
             <Text style={styles.greeting}>Salam, {firstName(profile?.fullName)}</Text>
             <Text style={styles.status}>
-              {isOnline ? 'Online' : 'Offline - sifariş almaq üçün aktiv rejimə keç'}
+              {isOnline ? 'Aktivsən · sifarişlər görünür' : 'Passivsən · sifariş gəlmir'}
             </Text>
           </View>
           <View style={styles.onlineToggle}>
@@ -60,7 +104,7 @@ export function DashboardScreen({ navigation }: Props) {
             <MapPin variant="usta" size={40} />
           </View>
           {isOnline &&
-            providerFeed.map((r, i) => (
+            feed.slice(0, 3).map((r, i) => (
               <View
                 key={r.id}
                 style={[
@@ -78,49 +122,57 @@ export function DashboardScreen({ navigation }: Props) {
         <View style={styles.sheetHandle} />
         <View style={styles.sheetHeaderRow}>
           <Text style={styles.sheetTitle}>Yaxınlıqdakı sorğular</Text>
-          <Text style={styles.sheetCount}>{isOnline ? providerFeed.length : 0}</Text>
+          <Text style={styles.sheetCount}>{isOnline ? feed.length : 0}</Text>
         </View>
 
-        {isOnline ? (
+        {!isOnline ? (
+          <View style={styles.offlineBox}>
+            <Feather name="moon" size={22} color={colors.textFaint} />
+            <Text style={styles.offlineText}>Sifariş almaq üçün aktiv rejimə keç</Text>
+          </View>
+        ) : loadingFeed && feed.length === 0 ? (
+          <View style={styles.offlineBox}>
+            <ActivityIndicator color={colors.amber} />
+          </View>
+        ) : (
           <FlatList
-            data={providerFeed}
+            data={feed}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+            contentContainerStyle={{ gap: 12, paddingBottom: 8, flexGrow: 1 }}
             renderItem={({ item }) => {
-              const category = serviceCategories.find((c) => c.id === item.category)!;
+              const category = getCategory(item.categoryId);
               return (
-                <Pressable
-                  onPress={() => navigation.navigate('IncomingRequest', { requestId: item.id })}
-                >
+                <Pressable onPress={() => navigation.navigate('IncomingRequest', { request: item })}>
                   <Card style={styles.reqCard}>
                     <View style={styles.reqTop}>
                       <View style={styles.reqIcon}>
-                        <Feather name={category.icon as any} size={17} color={colors.amber} />
+                        <Feather name={(category?.icon as any) ?? 'tool'} size={17} color={colors.amber} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.reqTitle}>{category.title} · {item.customerName}</Text>
+                        <Text style={styles.reqTitle}>{category?.title ?? 'Sorğu'}</Text>
                         <Text style={styles.reqAddress} numberOfLines={1}>
-                          {item.address}
+                          {item.address ?? 'Ünvan göstərilməyib'}
                         </Text>
                       </View>
-                      <Text style={styles.reqOffer}>{item.offer}</Text>
+                      <Text style={styles.reqPay}>{item.paymentMethod === 'card' ? 'Kart' : 'Nağd'}</Text>
                     </View>
                     <View style={styles.reqBottom}>
                       <Feather name="navigation" size={12} color={colors.textDim} />
                       <Text style={styles.reqMeta}>{item.distanceKm} km</Text>
                       <Text style={styles.reqDot}>·</Text>
-                      <Text style={styles.reqMeta}>{item.postedMinutesAgo} dəq əvvəl</Text>
+                      <Text style={styles.reqMeta}>{minutesAgo(item.createdAt)}</Text>
                     </View>
                   </Card>
                 </Pressable>
               );
             }}
+            ListEmptyComponent={
+              <View style={styles.offlineBox}>
+                <Feather name="inbox" size={22} color={colors.textFaint} />
+                <Text style={styles.offlineText}>Yaxınlıqda uyğun sorğu yoxdur</Text>
+              </View>
+            }
           />
-        ) : (
-          <View style={styles.offlineBox}>
-            <Feather name="moon" size={22} color={colors.textFaint} />
-            <Text style={styles.offlineText}>Sifariş almaq üçün aktiv rejimə keç</Text>
-          </View>
         )}
       </View>
     </View>
@@ -181,7 +233,7 @@ const styles = StyleSheet.create({
   },
   reqTitle: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.cream },
   reqAddress: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
-  reqOffer: { fontFamily: fonts.monoSemi, fontSize: 13.5, color: colors.amber },
+  reqPay: { fontFamily: fonts.monoSemi, fontSize: 12, color: colors.amber },
   reqBottom: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
   reqMeta: { fontFamily: fonts.bodyMedium, fontSize: 11.5, color: colors.textDim },
   reqDot: { color: colors.textFaint, fontSize: 11 },

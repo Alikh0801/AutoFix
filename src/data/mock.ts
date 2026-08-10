@@ -7,6 +7,7 @@ export interface ServiceCategory {
   icon: string;
   avgPrice: string;
   avgMinutes: number;
+  minPrice: number;
 }
 
 export const serviceCategories: ServiceCategory[] = [
@@ -17,6 +18,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'battery-charging',
     avgPrice: '5-15 AZN',
     avgMinutes: 12,
+    minPrice: 5,
   },
   {
     id: 'tire',
@@ -25,6 +27,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'disc',
     avgPrice: '10-30 AZN',
     avgMinutes: 15,
+    minPrice: 5,
   },
   {
     id: 'fuel',
@@ -33,6 +36,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'droplet',
     avgPrice: '20-35 AZN',
     avgMinutes: 18,
+    minPrice: 10,
   },
   {
     id: 'lockout',
@@ -41,6 +45,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'key',
     avgPrice: '15-25 AZN',
     avgMinutes: 10,
+    minPrice: 5,
   },
   {
     id: 'diagnostics',
@@ -49,6 +54,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'activity',
     avgPrice: '10-20 AZN',
     avgMinutes: 20,
+    minPrice: 10,
   },
   {
     id: 'other',
@@ -57,6 +63,7 @@ export const serviceCategories: ServiceCategory[] = [
     icon: 'tool',
     avgPrice: 'Qiymət razılaşma ilə',
     avgMinutes: 15,
+    minPrice: 0,
   },
 ];
 
