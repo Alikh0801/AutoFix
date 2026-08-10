@@ -10,7 +10,7 @@ export type RootStackParamList = {
 export type CustomerStackParamList = {
   CustomerTabs: undefined;
   RequestDetails: { category: ServiceCategoryId };
-  Searching: { category: ServiceCategoryId; note: string };
+  Searching: { requestId: string; category: ServiceCategoryId };
   Tracking: undefined;
   Rating: undefined;
   Vehicles: undefined;

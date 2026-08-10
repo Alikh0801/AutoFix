@@ -27,7 +27,13 @@
       "backgroundColor": "#0E1116"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Jolt yaxınlıqdakı köməyi tapmaq və sifarişini düzgün yerə göndərmək üçün yerini istifadə edir."
+        }
+      ]
     ]
   }
 }
