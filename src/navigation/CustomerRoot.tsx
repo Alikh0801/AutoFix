@@ -4,7 +4,7 @@ import { CustomerTabs } from './CustomerTabs';
 import { RequestDetailsScreen } from '../screens/customer/RequestDetailsScreen';
 import { SearchingScreen } from '../screens/customer/SearchingScreen';
 import { TrackingScreen } from '../screens/customer/TrackingScreen';
-import { RatingScreen } from '../screens/customer/RatingScreen';
+import { RatingScreen } from '../screens/shared/RatingScreen';
 import { VehiclesScreen } from '../screens/customer/VehiclesScreen';
 import { VehicleFormScreen } from '../screens/customer/VehicleFormScreen';
 import { CustomerStackParamList } from './types';

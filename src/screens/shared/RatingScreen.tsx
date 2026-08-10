@@ -1,33 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { RatingStars } from '../../components/RatingStars';
-import { CustomerStackParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
+import { submitRating } from '../../lib/api';
 
-type Props = NativeStackScreenProps<CustomerStackParamList, 'Rating'>;
+type RatingParams = { requestId: string; rateeLabel: string };
 
-export function RatingScreen({ navigation }: Props) {
-  const { activeRequest, clearRequest } = useApp();
+// Registered in both the customer and provider stacks; typed loosely so it can
+// be reused from either. It rates the other party of a completed job.
+export function RatingScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<Record<string, RatingParams>, string>>();
+  const { requestId, rateeLabel } = route.params;
+
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const usta = activeRequest?.usta;
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      await submitRating(requestId, stars, comment);
+    } catch {
+      // even if it fails, don't trap the user on this screen
+    }
+    navigation.popToTop();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.center}>
         <View style={styles.successCircle}>
-          <Text style={styles.successEmoji}>✓</Text>
+          <Text style={styles.successMark}>✓</Text>
         </View>
         <Text style={styles.title}>İş tamamlandı!</Text>
-        {usta && (
-          <Text style={styles.subtitle}>{usta.name} işi bitirdi. Xidməti qiymətləndir.</Text>
-        )}
+        <Text style={styles.subtitle}>{rateeLabel} ilə təcrübəni qiymətləndir.</Text>
 
         <View style={styles.starsWrap}>
           <RatingStars value={stars} size={34} onChange={setStars} />
@@ -43,13 +54,7 @@ export function RatingScreen({ navigation }: Props) {
         />
       </View>
 
-      <Button
-        label="Göndər"
-        onPress={() => {
-          clearRequest();
-          navigation.popToTop();
-        }}
-      />
+      <Button label="Göndər" onPress={handleSubmit} loading={saving} />
     </SafeAreaView>
   );
 }
@@ -66,7 +71,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
-  successEmoji: { fontSize: 30, color: colors.success, fontFamily: fonts.headingMedium },
+  successMark: { fontSize: 30, color: colors.success, fontFamily: fonts.headingMedium },
   title: { ...type.h2, marginBottom: 8 },
   subtitle: { ...type.bodyDim, textAlign: 'center', marginBottom: 28, paddingHorizontal: 20 },
   starsWrap: { marginBottom: 28 },

@@ -5,12 +5,13 @@ import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
+import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
 import { useCategories } from '../../context/CategoriesContext';
 import { supabase } from '../../lib/supabase';
-import { fetchRequestOffers, cancelRequest, RequestOffer } from '../../lib/api';
+import { fetchRequestOffers, cancelRequest, acceptOffer, RequestOffer } from '../../lib/api';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Searching'>;
@@ -22,6 +23,18 @@ export function SearchingScreen({ route, navigation }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const [offers, setOffers] = useState<RequestOffer[]>([]);
   const [cancelling, setCancelling] = useState(false);
+  const [accepting, setAccepting] = useState<string | null>(null);
+
+  const onAccept = async (offerId: string) => {
+    setAccepting(offerId);
+    try {
+      await acceptOffer(offerId);
+      navigation.replace('Tracking', { requestId });
+    } catch (e: any) {
+      setAccepting(null);
+      Alert.alert('Xəta', e?.message ?? 'Təklif qəbul edilmədi.');
+    }
+  };
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -113,9 +126,15 @@ export function SearchingScreen({ route, navigation }: Props) {
                     <Text style={styles.offerPrice}>{o.price} AZN</Text>
                   </View>
                   {o.note ? <Text style={styles.offerNote}>{o.note}</Text> : null}
+                  <Button
+                    label="Qəbul et"
+                    onPress={() => onAccept(o.id)}
+                    loading={accepting === o.id}
+                    disabled={accepting != null && accepting !== o.id}
+                    style={{ marginTop: 12, height: 44 }}
+                  />
                 </Card>
               ))}
-              <Text style={styles.offerHint}>Təklifi seçmək növbəti mərhələdə aktivləşəcək.</Text>
             </View>
           )}
 

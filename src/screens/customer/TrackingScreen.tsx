@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,62 +10,85 @@ import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
 import { StatusStepper } from '../../components/StatusStepper';
-import { serviceCategories, OrderStatus } from '../../data/mock';
+import { useCategories } from '../../context/CategoriesContext';
+import { fetchRequestDetail, RequestDetail } from '../../lib/api';
+import { distanceKm, etaMinutes } from '../../lib/location';
+import { RequestStatus } from '../../lib/api';
 import { CustomerStackParamList } from '../../navigation/types';
-import { useApp } from '../../context/AppContext';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Tracking'>;
 
-const flow: OrderStatus[] = ['accepted', 'en_route', 'arrived', 'in_progress', 'completed'];
-
-const statusCopy: Record<OrderStatus, string> = {
-  searching: '',
+const statusCopy: Record<RequestStatus, string> = {
+  searching: 'Ustalar axtarılır',
   accepted: 'Usta sifarişi qəbul etdi',
   en_route: 'Usta sənə doğru yoldadır',
   arrived: 'Usta məkana çatdı',
   in_progress: 'Təmir işi davam edir',
   completed: 'İş tamamlandı',
   cancelled: 'Sifariş ləğv olundu',
+  expired: 'Vaxtı bitdi',
 };
 
-export function TrackingScreen({ navigation }: Props) {
-  const { activeRequest } = useApp();
-  const [statusIndex, setStatusIndex] = useState(0);
-  const status = flow[statusIndex];
+function initials(name: string | null): string {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
+
+export function TrackingScreen({ route, navigation }: Props) {
+  const { requestId } = route.params;
+  const { getCategory } = useCategories();
+  const [detail, setDetail] = useState<RequestDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (statusIndex >= flow.length - 1) return;
-    const t = setTimeout(() => setStatusIndex((i) => i + 1), 2600);
-    return () => clearTimeout(t);
-  }, [statusIndex]);
+    let active = true;
+    const load = () => {
+      fetchRequestDetail(requestId)
+        .then((d) => {
+          if (!active) return;
+          setDetail(d);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    };
+    load();
+    const t = setInterval(load, 4000); // live status + provider position
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, [requestId]);
 
-  if (!activeRequest) {
+  if (loading || !detail) {
     return (
-      <SafeAreaView style={styles.emptyContainer}>
-        <Text style={type.bodyDim}>Aktiv sifariş yoxdur.</Text>
-        <Button label="Ana səhifəyə qayıt" onPress={() => navigation.goBack()} style={{ marginTop: 16 }} />
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator color={colors.amber} />
       </SafeAreaView>
     );
   }
 
-  const { usta } = activeRequest;
-  const category = serviceCategories.find((c) => c.id === activeRequest.category)!;
+  const category = getCategory(detail.categoryId);
+  const enRoute = detail.status === 'accepted' || detail.status === 'en_route';
+  const hasLive =
+    enRoute &&
+    detail.providerLat != null &&
+    detail.providerLng != null &&
+    detail.pickupLat != null &&
+    detail.pickupLng != null;
+  const km = hasLive
+    ? distanceKm(detail.providerLat!, detail.providerLng!, detail.pickupLat!, detail.pickupLng!)
+    : null;
 
   return (
     <View style={styles.container}>
       <MapMock style={styles.map}>
-        <View style={[styles.pin, { top: '46%', left: '50%', marginLeft: -22, marginTop: -22 }]}>
+        <View style={[styles.pin, { top: '48%', left: '50%', marginLeft: -22, marginTop: -22 }]}>
           <MapPin variant="you" size={44} />
         </View>
         <View
           style={[
             styles.pin,
-            {
-              top: statusIndex <= 1 ? '20%' : '46%',
-              left: statusIndex <= 1 ? '22%' : '50%',
-              marginLeft: -20,
-              marginTop: -20,
-            },
+            { top: enRoute ? '22%' : '48%', left: enRoute ? '26%' : '50%', marginLeft: -20, marginTop: -20 },
           ]}
         >
           <MapPin variant="usta" size={40} />
@@ -75,45 +98,56 @@ export function TrackingScreen({ navigation }: Props) {
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
           <View style={styles.sheetHandle} />
+          <Text style={styles.statusLine}>{statusCopy[detail.status]}</Text>
 
-          <Text style={styles.statusLine}>{statusCopy[status]}</Text>
+          {km != null && (
+            <Text style={styles.eta}>
+              {km < 0.1 ? 'Çox yaxın' : `${km.toFixed(1)} km`} · ~{etaMinutes(km!)} dəq
+            </Text>
+          )}
 
-          <StatusStepper current={status} />
+          <StatusStepper current={detail.status === 'searching' ? 'accepted' : (detail.status as any)} />
 
           <Card style={styles.ustaCard}>
             <View style={styles.ustaRow}>
-              <View style={[styles.avatar, { backgroundColor: usta.avatarColor }]}>
-                <Text style={styles.avatarText}>{usta.initials}</Text>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials(detail.providerName)}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ustaName}>{usta.name}</Text>
-                <Text style={styles.ustaVehicle}>{usta.vehicle}</Text>
+                <Text style={styles.ustaName}>{detail.providerName ?? 'Usta'}</Text>
+                <View style={styles.metaRow}>
+                  <Feather name="star" size={12} color={colors.amber} />
+                  <Text style={styles.metaText}>
+                    {detail.providerRatingCount > 0 ? detail.providerRating.toFixed(1) : 'Yeni'}
+                  </Text>
+                  <Text style={styles.metaDot}>·</Text>
+                  <Text style={styles.metaText}>{category?.title ?? 'Xidmət'}</Text>
+                </View>
               </View>
-              <View style={styles.actionCol}>
-                <Pressable style={styles.actionBtn} onPress={() => Linking.openURL('tel:+994501234567')}>
-                  <Feather name="phone" size={16} color={colors.bg} />
-                </Pressable>
-                <Pressable style={[styles.actionBtn, styles.actionBtnGhost]}>
-                  <Feather name="message-circle" size={16} color={colors.amber} />
-                </Pressable>
-              </View>
+              <Pressable style={styles.callBtn} onPress={() => Linking.openURL('tel:')}>
+                <Feather name="phone" size={16} color={colors.bg} />
+              </Pressable>
             </View>
-
             <View style={styles.divider} />
-
-            <View style={styles.summaryRow}>
-              <Feather name={category.icon as any} size={15} color={colors.textDim} />
-              <Text style={styles.summaryText}>{category.title}</Text>
-              <View style={{ flex: 1 }} />
-              <Text style={styles.summaryPrice}>{category.avgPrice}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Razılaşdırılmış qiymət</Text>
+              <Text style={styles.priceValue}>
+                {detail.agreedPrice != null ? `${detail.agreedPrice} AZN` : '—'} ·{' '}
+                {detail.paymentMethod === 'card' ? 'Kart' : 'Nağd'}
+              </Text>
             </View>
           </Card>
 
-          {status === 'completed' ? (
-            <Button label="Sifarişi qiymətləndir" onPress={() => navigation.replace('Rating')} />
-          ) : (
-            <Button label="Sifarişi ləğv et" variant="danger" onPress={() => navigation.popToTop()} />
-          )}
+          {detail.status === 'completed' ? (
+            <Button
+              label="Qiymətləndir"
+              onPress={() =>
+                navigation.replace('Rating', { requestId, rateeLabel: detail.providerName ?? 'Usta' })
+              }
+            />
+          ) : detail.status === 'cancelled' ? (
+            <Button label="Ana səhifəyə qayıt" variant="secondary" onPress={() => navigation.popToTop()} />
+          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -122,7 +156,7 @@ export function TrackingScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
   pin: { position: 'absolute' },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
@@ -135,18 +169,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    gap: 18,
+    gap: 16,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center' },
   statusLine: { fontFamily: fonts.headingMedium, fontSize: 17, color: colors.cream, textAlign: 'center' },
+  eta: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber, textAlign: 'center', marginTop: -8 },
   ustaCard: { gap: 0 },
   ustaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.bg },
   ustaName: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.cream },
-  ustaVehicle: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
-  actionCol: { flexDirection: 'row', gap: 8 },
-  actionBtn: {
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 },
+  metaText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textDim },
+  metaDot: { color: colors.textFaint, fontSize: 12 },
+  callBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
@@ -154,9 +197,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionBtnGhost: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.amberDim },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 14 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
-  summaryPrice: { fontFamily: fonts.monoSemi, fontSize: 12.5, color: colors.amber },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
+  priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
 });
