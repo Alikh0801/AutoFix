@@ -78,6 +78,15 @@ export function DashboardScreen({ navigation }: Props) {
     };
   }, [isOnline, loadFeed]);
 
+  // Also poll on a timer: when a customer cancels, RLS hides the row from the
+  // provider so no Realtime event arrives — a periodic refetch drops cancelled
+  // and expired requests out of the list.
+  useEffect(() => {
+    if (!isOnline) return;
+    const t = setInterval(() => loadFeed(), 12000);
+    return () => clearInterval(t);
+  }, [isOnline, loadFeed]);
+
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.topWrap}>
