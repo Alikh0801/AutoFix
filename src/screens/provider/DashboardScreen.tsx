@@ -47,7 +47,7 @@ const feedPinPositions = [
 
 export function DashboardScreen({ navigation }: Props) {
   const { isOnline, setIsOnline } = useApp();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const { location } = useLocation();
   const { getCategory } = useCategories();
   const [feed, setFeed] = useState<ProviderFeedItem[]>([]);
@@ -73,6 +73,21 @@ export function DashboardScreen({ navigation }: Props) {
       .finally(() => setLoadingFeed(false));
   }, [isOnline, location]);
 
+  const checkActive = useCallback(
+    (onNone: () => void) => {
+      fetchMyActiveJob()
+        .then((job) => {
+          if (job) {
+            navigation.navigate('ActiveJob', { requestId: job.id });
+          } else {
+            onNone();
+          }
+        })
+        .catch(() => onNone());
+    },
+    [navigation]
+  );
+
   // On every focus (mount, tab switch back, returning after completing a job),
   // check for an active job FIRST. If there is one, jump straight into it and
   // never reveal the browsing feed; only load the feed once we know there
@@ -81,27 +96,41 @@ export function DashboardScreen({ navigation }: Props) {
     useCallback(() => {
       let active = true;
       setCheckingActive(true);
-      fetchMyActiveJob()
-        .then((job) => {
-          if (!active) return;
-          if (job) {
-            navigation.navigate('ActiveJob', { requestId: job.id });
-          } else {
-            setCheckingActive(false);
-            loadFeed();
-          }
-        })
-        .catch(() => {
-          if (active) {
-            setCheckingActive(false);
-            loadFeed();
-          }
-        });
+      checkActive(() => {
+        if (active) {
+          setCheckingActive(false);
+          loadFeed();
+        }
+      });
       return () => {
         active = false;
       };
-    }, [loadFeed, navigation])
+    }, [checkActive, loadFeed])
   );
+
+  // Also react live the instant one of the provider's own offers gets
+  // accepted, instead of waiting for a tab-focus to notice — a provider
+  // browsing the feed (not on the dedicated waiting screen) would otherwise
+  // sit on a stale "no requests" panel until they switched tabs and back.
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const channel = supabase
+      .channel(`provider-own-offers-${uid}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'offers', filter: `provider_id=eq.${uid}` },
+        (payload) => {
+          if ((payload.new as any)?.status === 'accepted') {
+            checkActive(() => {});
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id, checkActive]);
 
   // Refresh the feed live as requests appear / change.
   useEffect(() => {
