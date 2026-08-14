@@ -55,7 +55,12 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
     setSubmitting(true);
     try {
       await submitOffer(request.id, value, note);
-      navigation.goBack();
+      navigation.replace('OfferPending', {
+        requestId: request.id,
+        categoryId: request.categoryId,
+        address: request.address,
+        price: value,
+      });
     } catch (e: any) {
       setError(e?.message ?? 'Təklif göndərilmədi. Yenidən cəhd et.');
       setSubmitting(false);

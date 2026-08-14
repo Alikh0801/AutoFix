@@ -465,6 +465,20 @@ export async function withdrawOffer(requestId: string): Promise<void> {
   if (error) throw error;
 }
 
+export interface OfferStatus {
+  offerStatus: 'pending' | 'accepted' | 'closed' | 'withdrawn';
+  requestStatus: RequestStatus;
+}
+
+/** Fate of the provider's own offer on a request — for the "waiting on the customer" screen. */
+export async function fetchOfferStatus(requestId: string): Promise<OfferStatus | null> {
+  const { data, error } = await supabase.rpc('provider_offer_status', { p_request_id: requestId });
+  if (error) throw error;
+  const row = data?.[0];
+  if (!row) return null;
+  return { offerStatus: row.offer_status, requestStatus: row.request_status };
+}
+
 // --- Provider earnings ------------------------------------------------------
 
 export interface EarningsDay {
