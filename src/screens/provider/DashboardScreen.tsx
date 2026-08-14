@@ -16,7 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
 import { supabase } from '../../lib/supabase';
-import { fetchProviderFeed, setProviderStatus, fetchMyActiveJob, ProviderFeedItem, ActiveJob } from '../../lib/api';
+import { fetchProviderFeed, setProviderStatus, fetchMyActiveJob, ProviderFeedItem } from '../../lib/api';
 
 function firstName(name: string | null | undefined): string {
   return name?.trim().split(/\s+/)[0] || 'Usta';
@@ -46,7 +46,9 @@ export function DashboardScreen({ navigation }: Props) {
   const { getCategory } = useCategories();
   const [feed, setFeed] = useState<ProviderFeedItem[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
-  const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
+  // Gate the feed behind an active-job check so a provider with an ongoing
+  // job never sees the browsing list — they get funnelled straight into it.
+  const [checkingActive, setCheckingActive] = useState(true);
 
   // Mirror online status + location to the DB.
   useEffect(() => {
@@ -65,11 +67,34 @@ export function DashboardScreen({ navigation }: Props) {
       .finally(() => setLoadingFeed(false));
   }, [isOnline, location]);
 
+  // On every focus (mount, tab switch back, returning after completing a job),
+  // check for an active job FIRST. If there is one, jump straight into it and
+  // never reveal the browsing feed; only load the feed once we know there
+  // isn't one.
   useFocusEffect(
     useCallback(() => {
-      loadFeed();
-      fetchMyActiveJob().then(setActiveJob).catch(() => {});
-    }, [loadFeed])
+      let active = true;
+      setCheckingActive(true);
+      fetchMyActiveJob()
+        .then((job) => {
+          if (!active) return;
+          if (job) {
+            navigation.navigate('ActiveJob', { requestId: job.id });
+          } else {
+            setCheckingActive(false);
+            loadFeed();
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setCheckingActive(false);
+            loadFeed();
+          }
+        });
+      return () => {
+        active = false;
+      };
+    }, [loadFeed, navigation])
   );
 
   // Refresh the feed live as requests appear / change.
@@ -136,19 +161,12 @@ export function DashboardScreen({ navigation }: Props) {
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
 
-        {activeJob && (
-          <Pressable style={styles.activeBanner} onPress={() => navigation.navigate('ActiveJob', { requestId: activeJob.id })}>
-            <View style={styles.activeIcon}>
-              <Feather name="navigation" size={16} color={colors.bg} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.activeTitle}>Aktiv işin var</Text>
-              <Text style={styles.activeSub}>{activeJob.customerName ?? 'Müştəri'} · davam etmək üçün toxun</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.bg} />
-          </Pressable>
-        )}
-
+        {checkingActive ? (
+          <View style={styles.offlineBox}>
+            <ActivityIndicator color={colors.amber} />
+          </View>
+        ) : (
+          <>
         <View style={styles.sheetHeaderRow}>
           <Text style={styles.sheetTitle}>Yaxınlıqdakı sorğular</Text>
           <Text style={styles.sheetCount}>{isOnline ? feed.length : 0}</Text>
@@ -209,6 +227,8 @@ export function DashboardScreen({ navigation }: Props) {
             }
           />
         )}
+          </>
+        )}
       </View>
     </View>
   );
@@ -242,25 +262,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 14 },
-  activeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.amber,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-  },
-  activeIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: 'rgba(14,17,22,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeTitle: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.bg },
-  activeSub: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(14,17,22,0.7)', marginTop: 1 },
   sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   sheetTitle: { ...type.h3 },
   sheetCount: {
