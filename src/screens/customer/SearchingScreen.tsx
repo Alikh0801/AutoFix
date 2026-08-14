@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Pressable, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,12 +9,18 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
+import { RatingStars } from '../../components/RatingStars';
 import { useCategories } from '../../context/CategoriesContext';
 import { supabase } from '../../lib/supabase';
 import { fetchRequestOffers, cancelRequest, acceptOffer, RequestOffer } from '../../lib/api';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Searching'>;
+
+function initials(name: string | null): string {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
 
 export function SearchingScreen({ route, navigation }: Props) {
   const { requestId, category: categoryId } = route.params;
@@ -120,12 +126,41 @@ export function SearchingScreen({ route, navigation }: Props) {
               {offers.map((o) => (
                 <Card key={o.id} style={styles.offerCard}>
                   <View style={styles.offerTop}>
-                    <Feather name="tool" size={15} color={colors.amber} />
-                    <Text style={styles.offerText}>Usta təklifi</Text>
-                    <View style={{ flex: 1 }} />
+                    <View style={styles.offerAvatar}>
+                      <Text style={styles.offerAvatarText}>{initials(o.providerName)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.offerText}>{o.providerName ?? 'Usta'}</Text>
+                      <View style={styles.offerMetaRow}>
+                        <RatingStars value={Math.round(o.providerRating)} size={11} />
+                        <Text style={styles.offerMetaText}>
+                          {o.providerRatingCount > 0 ? o.providerRating.toFixed(1) : 'Yeni'}
+                        </Text>
+                        {o.vehicleLabel ? (
+                          <>
+                            <Text style={styles.offerMetaDot}>·</Text>
+                            <Text style={styles.offerMetaText} numberOfLines={1}>
+                              {o.vehicleLabel}
+                            </Text>
+                          </>
+                        ) : null}
+                      </View>
+                    </View>
                     <Text style={styles.offerPrice}>{o.price} AZN</Text>
                   </View>
+
+                  {o.providerPhone ? (
+                    <Pressable
+                      style={styles.offerPhoneRow}
+                      onPress={() => Linking.openURL(`tel:${o.providerPhone}`)}
+                    >
+                      <Feather name="phone" size={12} color={colors.textDim} />
+                      <Text style={styles.offerPhoneText}>{o.providerPhone}</Text>
+                    </Pressable>
+                  ) : null}
+
                   {o.note ? <Text style={styles.offerNote}>{o.note}</Text> : null}
+
                   <Button
                     label="Qəbul et"
                     onPress={() => onAccept(o.id)}
@@ -195,7 +230,21 @@ const styles = StyleSheet.create({
   offerList: { alignSelf: 'stretch', gap: 8, marginBottom: 14 },
   offerCard: { gap: 0 },
   offerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  offerText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.cream },
+  offerAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerAvatarText: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.bg },
+  offerText: { fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
+  offerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  offerMetaText: { fontFamily: fonts.body, fontSize: 11, color: colors.textDim },
+  offerMetaDot: { color: colors.textFaint, fontSize: 11 },
+  offerPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  offerPhoneText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textDim },
   offerNote: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 8, lineHeight: 18 },
   offerPrice: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
   offerHint: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint, textAlign: 'center', marginTop: 2 },

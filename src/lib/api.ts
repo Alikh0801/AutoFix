@@ -188,22 +188,30 @@ export interface RequestOffer {
   price: number;
   note: string | null;
   status: 'pending' | 'accepted' | 'closed' | 'withdrawn';
+  providerName: string | null;
+  providerPhone: string | null;
+  providerRating: number;
+  providerRatingCount: number;
+  vehicleLabel: string | null;
 }
 
-/** Offers placed on one of the customer's requests. */
+/** Offers placed on one of the customer's requests, with the bidder's identity. */
 export async function fetchRequestOffers(requestId: string): Promise<RequestOffer[]> {
-  const { data, error } = await supabase
-    .from('offers')
-    .select('id, provider_id, price, note, status')
-    .eq('request_id', requestId)
-    .order('price', { ascending: true });
+  const { data, error } = await supabase.rpc('request_offers_detail', { p_request_id: requestId });
   if (error) throw error;
-  return (data ?? []).map((o) => ({
-    id: o.id,
+  return (data ?? []).map((o: any) => ({
+    id: o.offer_id,
     providerId: o.provider_id,
     price: Number(o.price),
     note: o.note ?? null,
     status: o.status,
+    providerName: o.provider_name ?? null,
+    providerPhone: o.provider_phone ?? null,
+    providerRating: o.provider_rating != null ? Number(o.provider_rating) : 0,
+    providerRatingCount: o.provider_rating_count ?? 0,
+    vehicleLabel:
+      [[o.vehicle_make, o.vehicle_model].filter(Boolean).join(' '), o.vehicle_plate].filter(Boolean).join(' · ') ||
+      null,
   }));
 }
 
