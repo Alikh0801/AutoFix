@@ -40,6 +40,7 @@ export interface Profile {
   fullName: string | null;
   phone: string | null;
   homeCity: string | null;
+  dateOfBirth: string | null;
 }
 
 // --- Vehicles ---------------------------------------------------------------
@@ -544,11 +545,17 @@ export async function fetchMyProfile(): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, phone, home_city')
+    .select('id, full_name, phone, home_city, date_of_birth')
     .eq('id', uid)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
-  return { id: data.id, fullName: data.full_name, phone: data.phone, homeCity: data.home_city };
+  return {
+    id: data.id,
+    fullName: data.full_name,
+    phone: data.phone,
+    homeCity: data.home_city,
+    dateOfBirth: data.date_of_birth,
+  };
 }

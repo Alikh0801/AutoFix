@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCategories } from '../../context/CategoriesContext';
 import { fetchMyVehicles, fetchMyProviderSkills, vehicleLine, Vehicle } from '../../lib/api';
+import { isoToDisplay } from '../../lib/dob';
 import { ServiceCategoryId } from '../../data/mock';
 import { ProviderStackParamList } from '../../navigation/types';
 
@@ -70,6 +71,9 @@ export function ProviderProfileScreen() {
               <RatingStars value={5} size={13} />
               <Text style={styles.ratingText}>Yeni</Text>
             </View>
+            <Text style={styles.ratingText}>
+              {[profile?.phone, isoToDisplay(profile?.dateOfBirth)].filter(Boolean).join(' · ')}
+            </Text>
           </View>
         </View>
 
