@@ -420,6 +420,10 @@ export interface ProviderFeedItem {
   createdAt: string;
   myOfferPrice: number | null;
   myOfferNote: string | null;
+  customerName: string | null;
+  customerRating: number | null;
+  customerRatingCount: number;
+  customerVehicleLabel: string | null;
 }
 
 /** Nearby open requests matching the provider's skills, nearest first. */
@@ -436,6 +440,12 @@ export async function fetchProviderFeed(lat: number, lng: number, radiusM = 8000
     createdAt: r.created_at,
     myOfferPrice: r.my_offer_price != null ? Number(r.my_offer_price) : null,
     myOfferNote: r.my_offer_note ?? null,
+    customerName: r.customer_name ?? null,
+    customerRating: r.customer_rating != null ? Number(r.customer_rating) : null,
+    customerRatingCount: r.customer_rating_count != null ? Number(r.customer_rating_count) : 0,
+    customerVehicleLabel: [[r.vehicle_make, r.vehicle_model].filter(Boolean).join(' '), r.vehicle_plate]
+      .filter(Boolean)
+      .join(' · ') || null,
   }));
 }
 
