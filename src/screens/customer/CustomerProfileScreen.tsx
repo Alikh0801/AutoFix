@@ -10,6 +10,7 @@ import { Card } from '../../components/Card';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMyVehicles, vehicleLine, Vehicle } from '../../lib/api';
+import { isoToDisplay } from '../../lib/dob';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<CustomerStackParamList>;
@@ -60,6 +61,9 @@ export function CustomerProfileScreen() {
           <View>
             <Text style={styles.name}>{profile?.fullName || 'İstifadəçi'}</Text>
             <Text style={styles.phone}>{profile?.phone || '—'}</Text>
+            {profile?.dateOfBirth && (
+              <Text style={styles.phone}>{isoToDisplay(profile.dateOfBirth)}</Text>
+            )}
           </View>
         </View>
 

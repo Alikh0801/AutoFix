@@ -1,7 +1,7 @@
 // Azerbaijani mobile number handling.
 //
-// Format: +994 XX XXX XX XX — a 2-digit operator code + 7 digits (9 total),
-// e.g. +994 55 322 11 11. We store the E.164 form "+994553221111".
+// Format: +994-XX-XXX-XX-XX — a 2-digit operator code + 7 digits (9 total),
+// e.g. +994-55-322-11-11. We store the E.164 form "+994553221111".
 
 export const AZ_DIAL_CODE = '+994';
 
@@ -16,11 +16,12 @@ export function sanitizeAzLocal(input: string): string {
   return input.replace(/\D/g, '').slice(0, LOCAL_DIGITS);
 }
 
-/** Group local digits for display: "553221111" -> "55 322 11 11". */
+/** Group local digits for display: "553221111" -> "55-322-11-11" (shown next
+ *  to the "+994" prefix, together reading "+994-55-322-11-11"). */
 export function formatAzLocal(localDigits: string): string {
   const d = sanitizeAzLocal(localDigits);
   const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)];
-  return parts.filter(Boolean).join(' ');
+  return parts.filter(Boolean).join('-');
 }
 
 export interface AzPhoneResult {
@@ -34,7 +35,7 @@ export function validateAzPhone(localDigits: string): AzPhoneResult {
   const d = localDigits.replace(/\D/g, '');
   if (d.length === 0) return { valid: false, error: 'Telefon nömrəsi tələb olunur.' };
   if (d.length < LOCAL_DIGITS)
-    return { valid: false, error: 'Nömrə yarımçıqdır (məs. +994 55 322 11 11).' };
+    return { valid: false, error: 'Nömrə yarımçıqdır (məs. +994-55-322-11-11).' };
   if (d.length > LOCAL_DIGITS) return { valid: false, error: 'Nömrə çox uzundur.' };
   if (!AZ_OPERATOR_CODES.includes(d.slice(0, 2)))
     return { valid: false, error: 'Operator kodu düzgün deyil (məs. 50, 51, 55, 70, 77, 99).' };
