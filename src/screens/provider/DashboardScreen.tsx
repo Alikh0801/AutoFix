@@ -10,6 +10,7 @@ import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { MapMock } from '../../components/MapMock';
 import { MapPin } from '../../components/MapPin';
+import { RatingStars } from '../../components/RatingStars';
 import { ProviderStackParamList, ProviderTabParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +27,11 @@ function minutesAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
   if (mins < 1) return 'indi';
   return `${mins} dəq əvvəl`;
+}
+
+function initials(name: string | null): string {
+  if (!name) return 'M';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
 
 type Props = CompositeScreenProps<
@@ -203,6 +209,26 @@ export function DashboardScreen({ navigation }: Props) {
                       </View>
                       <Text style={styles.reqPay}>{item.paymentMethod === 'card' ? 'Kart' : 'Nağd'}</Text>
                     </View>
+                    <View style={styles.reqCustomerRow}>
+                      <View style={styles.reqCustomerAvatar}>
+                        <Text style={styles.reqCustomerAvatarText}>{initials(item.customerName)}</Text>
+                      </View>
+                      <Text style={styles.reqCustomerName} numberOfLines={1}>
+                        {item.customerName ?? 'Müştəri'}
+                      </Text>
+                      <RatingStars value={Math.round(item.customerRating ?? 5)} size={10} />
+                      <Text style={styles.reqMeta}>
+                        {item.customerRatingCount > 0 ? item.customerRating!.toFixed(1) : 'Yeni'}
+                      </Text>
+                      {item.customerVehicleLabel ? (
+                        <>
+                          <Text style={styles.reqDot}>·</Text>
+                          <Text style={styles.reqMeta} numberOfLines={1}>
+                            {item.customerVehicleLabel}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
                     <View style={styles.reqBottom}>
                       <Feather name="navigation" size={12} color={colors.textDim} />
                       <Text style={styles.reqMeta}>{item.distanceKm} km</Text>
@@ -300,6 +326,17 @@ const styles = StyleSheet.create({
   reqTitle: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.cream },
   reqAddress: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
   reqPay: { fontFamily: fonts.monoSemi, fontSize: 12, color: colors.amber },
+  reqCustomerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  reqCustomerAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reqCustomerAvatarText: { fontFamily: fonts.bodySemi, fontSize: 9, color: colors.bg },
+  reqCustomerName: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.cream, flexShrink: 1 },
   reqBottom: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
   reqMeta: { fontFamily: fonts.bodyMedium, fontSize: 11.5, color: colors.textDim },
   reqDot: { color: colors.textFaint, fontSize: 11 },

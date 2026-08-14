@@ -17,11 +17,17 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { RatingStars } from '../../components/RatingStars';
 import { useCategories } from '../../context/CategoriesContext';
 import { submitOffer, withdrawOffer } from '../../lib/api';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'IncomingRequest'>;
+
+function initials(name: string | null): string {
+  if (!name) return 'M';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
 
 export function IncomingRequestScreen({ route, navigation }: Props) {
   const { request } = route.params;
@@ -93,6 +99,31 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
                 <Text style={styles.distance}>{request.distanceKm} km məsafədə</Text>
               </View>
               <Text style={styles.pay}>{request.paymentMethod === 'card' ? 'Kart' : 'Nağd'}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.customerRow}>
+              <View style={styles.customerAvatar}>
+                <Text style={styles.customerAvatarText}>{initials(request.customerName)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.customerName}>{request.customerName ?? 'Müştəri'}</Text>
+                <View style={styles.customerMetaRow}>
+                  <RatingStars value={Math.round(request.customerRating ?? 5)} size={11} />
+                  <Text style={styles.customerMetaText}>
+                    {request.customerRatingCount > 0 ? request.customerRating!.toFixed(1) : 'Yeni'}
+                  </Text>
+                  {request.customerVehicleLabel ? (
+                    <>
+                      <Text style={styles.customerMetaDot}>·</Text>
+                      <Text style={styles.customerMetaText} numberOfLines={1}>
+                        {request.customerVehicleLabel}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
+              </View>
             </View>
 
             <View style={styles.divider} />
@@ -185,6 +216,20 @@ const styles = StyleSheet.create({
   distance: { fontFamily: fonts.body, fontSize: 13, color: colors.textDim, marginTop: 2 },
   pay: { fontFamily: fonts.monoSemi, fontSize: 12, color: colors.amber },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 16 },
+  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  customerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerAvatarText: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.bg },
+  customerName: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.cream },
+  customerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  customerMetaText: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim },
+  customerMetaDot: { color: colors.textFaint, fontSize: 11 },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   infoText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream, lineHeight: 19 },
   editedBanner: {
