@@ -92,6 +92,19 @@ export function EarningsScreen() {
           </View>
         </Card>
 
+        <Card style={styles.balanceCard}>
+          <View style={styles.balanceLeft}>
+            <View style={styles.balanceIcon}>
+              <Feather name="credit-card" size={18} color={colors.amber} />
+            </View>
+            <View>
+              <Text style={styles.balanceLabel}>Balans</Text>
+              <Text style={styles.balanceSub}>Çıxarıla bilən məbləğ</Text>
+            </View>
+          </View>
+          <Text style={styles.balanceValue}>{data.walletBalance} AZN</Text>
+        </Card>
+
         {data.commissionOwed > 0 && (
           <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
             <View style={styles.debtIcon}>
@@ -99,7 +112,7 @@ export function EarningsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Komissiya borcu: {data.commissionOwed} AZN</Text>
-              <Text style={styles.debtSub}>Sifariş almaq üçün balansdan ödə</Text>
+              <Text style={styles.debtSub}>Yuxarıdakı balansdan ödənilir</Text>
             </View>
             {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
           </Pressable>
@@ -115,11 +128,6 @@ export function EarningsScreen() {
             <Feather name="star" size={16} color={colors.amber} />
             <Text style={styles.statValue}>{data.ratingCount > 0 ? data.ratingAvg.toFixed(1) : 'Yeni'}</Text>
             <Text style={styles.statLabel}>Reytinq</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="credit-card" size={16} color={colors.info} />
-            <Text style={styles.statValue}>{data.walletBalance} AZN</Text>
-            <Text style={styles.statLabel}>Balans</Text>
           </Card>
         </View>
 
@@ -173,6 +181,24 @@ const styles = StyleSheet.create({
   },
   barFill: { width: '100%', backgroundColor: colors.amber, borderRadius: 7 },
   barLabel: { fontFamily: fonts.body, fontSize: 10, color: colors.textFaint },
+  balanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  balanceLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  balanceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.amberSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceLabel: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
+  balanceSub: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim, marginTop: 1 },
+  balanceValue: { fontFamily: fonts.headingMedium, fontSize: 20, color: colors.amber },
   debtBanner: {
     flexDirection: 'row',
     alignItems: 'center',
