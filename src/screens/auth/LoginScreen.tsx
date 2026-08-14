@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
@@ -39,29 +40,44 @@ export function LoginScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={styles.dismissArea} onPress={() => Keyboard.dismiss()} accessible={false}>
-        <SafeAreaView style={styles.container}>
-          <LogoMark size={40} />
-          <Text style={styles.title}>Xoş gəldin</Text>
-          <Text style={styles.subtitle}>Telefon nömrənlə daxil ol</Text>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+          <View style={styles.hero}>
+            <View style={styles.badge}>
+              <LogoMark size={44} />
+            </View>
+            <Text style={styles.wordmark}>
+              JOLT<Text style={{ color: colors.amber }}>.</Text>
+            </Text>
+            <Text style={styles.tagline}>yolda qalma</Text>
 
-          <Text style={styles.label}>Telefon</Text>
-          <View style={styles.phoneRow}>
-            <Text style={styles.prefix}>{AZ_DIAL_CODE}</Text>
-            <TextInput
-              value={formatAzLocal(phoneDigits)}
-              onChangeText={(v) => setPhoneDigits(sanitizeAzLocal(v))}
-              placeholder="55-322-11-11"
-              placeholderTextColor={colors.textFaint}
-              keyboardType="phone-pad"
-              style={styles.phoneInput}
+            <Text style={styles.title}>Xoş gəldin</Text>
+            <Text style={styles.subtitle}>Davam etmək üçün telefon nömrənlə daxil ol</Text>
+
+            <View style={styles.phoneRow}>
+              <Feather name="phone" size={16} color={colors.textDim} />
+              <Text style={styles.prefix}>{AZ_DIAL_CODE}</Text>
+              <View style={styles.divider} />
+              <TextInput
+                value={formatAzLocal(phoneDigits)}
+                onChangeText={(v) => setPhoneDigits(sanitizeAzLocal(v))}
+                placeholder="55-322-11-11"
+                placeholderTextColor={colors.textFaint}
+                keyboardType="phone-pad"
+                style={styles.phoneInput}
+              />
+            </View>
+
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <Button
+              label="Daxil ol"
+              onPress={handleLogin}
+              loading={loading}
+              disabled={phoneDigits.length < 9}
+              style={{ marginTop: 22 }}
             />
           </View>
 
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <View style={{ flex: 1 }} />
-
-          <Button label="Daxil ol" onPress={handleLogin} loading={loading} disabled={phoneDigits.length < 9} />
           <Pressable style={styles.linkRow} onPress={() => navigation.replace('Register')}>
             <Text style={styles.linkText}>
               Hesabın yoxdur? <Text style={styles.linkAccent}>Qeydiyyatdan keç</Text>
@@ -85,26 +101,57 @@ export function mapAuthError(message?: string): string {
 
 const styles = StyleSheet.create({
   dismissArea: { flex: 1 },
-  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 16 },
-  title: { ...type.h1, marginTop: 20, marginBottom: 6 },
-  subtitle: { ...type.bodyDim, fontSize: 15, marginBottom: 28 },
-  label: { ...type.label, marginBottom: 8, marginTop: 4 },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 28 },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  badge: {
+    width: 84,
+    height: 84,
+    borderRadius: 24,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 16,
-    height: 54,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  prefix: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.textDim, marginRight: 10 },
-  phoneInput: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.cream },
+  wordmark: { fontFamily: fonts.heading, fontSize: 26, color: colors.cream, letterSpacing: 0.3 },
+  tagline: {
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    color: colors.textDim,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginTop: 4,
+    marginBottom: 36,
+  },
+  title: { ...type.h2, textAlign: 'center', marginBottom: 6 },
+  subtitle: { ...type.bodyDim, fontSize: 14, textAlign: 'center', marginBottom: 32, paddingHorizontal: 12 },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 18,
+    height: 58,
+    paddingHorizontal: 18,
+    gap: 10,
+  },
+  prefix: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.cream },
+  divider: { width: 1, height: 22, backgroundColor: colors.line },
+  phoneInput: {
+    flex: 1,
+    fontFamily: fonts.bodySemi,
+    fontSize: 16,
+    color: colors.cream,
+    letterSpacing: 0.5,
+  },
   error: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
     color: colors.danger,
+    textAlign: 'center',
     marginTop: 14,
   },
   linkRow: { alignItems: 'center', paddingVertical: 16 },
