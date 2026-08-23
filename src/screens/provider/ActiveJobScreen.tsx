@@ -7,8 +7,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { StatusStepper } from '../../components/StatusStepper';
 import { useCategories } from '../../context/CategoriesContext';
 import {
@@ -35,16 +34,21 @@ export function ActiveJobScreen({ navigation }: Props) {
   const [job, setJob] = useState<ActiveJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
 
   const load = () => fetchMyActiveJob().then(setJob).catch(() => {}).finally(() => setLoading(false));
 
   useEffect(() => {
     load();
     const poll = setInterval(load, 5000);
-    // Stream the provider's live position so the customer sees them approach.
+    // Stream the provider's live position so the customer sees them approach,
+    // and keep the same reading locally to draw it on our own live map.
     const pushLocation = () =>
       getCurrentLocation()
-        .then((loc) => setProviderStatus(true, loc.lat, loc.lng))
+        .then((loc) => {
+          setMyLoc({ lat: loc.lat, lng: loc.lng });
+          setProviderStatus(true, loc.lat, loc.lng);
+        })
         .catch(() => {});
     pushLocation();
     const loc = setInterval(pushLocation, 10000);
@@ -75,6 +79,12 @@ export function ActiveJobScreen({ navigation }: Props) {
   const category = getCategory(job.categoryId);
   const step = nextStep[job.status];
 
+  const markers: LiveMapMarker[] = [];
+  if (myLoc) markers.push({ id: 'me', lat: myLoc.lat, lng: myLoc.lng, variant: 'usta' });
+  if (job.pickupLat != null && job.pickupLng != null) {
+    markers.push({ id: 'dest', lat: job.pickupLat, lng: job.pickupLng, variant: 'destination' });
+  }
+
   const onAdvance = async () => {
     if (!step) return;
     setBusy(true);
@@ -100,14 +110,7 @@ export function ActiveJobScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <MapMock style={styles.map}>
-        <View style={[styles.pin, { top: '30%', left: '35%', marginLeft: -20, marginTop: -20 }]}>
-          <MapPin variant="usta" size={40} />
-        </View>
-        <View style={[styles.pin, { top: '58%', left: '65%', marginLeft: -18, marginTop: -18 }]}>
-          <MapPin variant="destination" size={36} />
-        </View>
-      </MapMock>
+      <LiveMap style={styles.map} markers={markers} />
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
@@ -156,7 +159,6 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   emptyText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textDim, marginTop: 10 },
   map: { flex: 1 },
-  pin: { position: 'absolute' },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheetInner: {
     backgroundColor: colors.bg,
