@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { CompositeScreenProps } from '@react-navigation/native';
+import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -12,6 +12,7 @@ import { MapPin } from '../../components/MapPin';
 import { ServiceCategoryCard } from '../../components/ServiceCategoryCard';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
+import { fetchMyActiveRequest } from '../../lib/api';
 import { CustomerStackParamList, CustomerTabParamList } from '../../navigation/types';
 
 type Props = CompositeScreenProps<
@@ -22,6 +23,34 @@ type Props = CompositeScreenProps<
 export function HomeScreen({ navigation }: Props) {
   const { categories, loading } = useCategories();
   const { location, loading: locLoading, denied } = useLocation();
+  // Mirror the provider Dashboard's lock: if the customer already has a
+  // request in flight, jump straight back into it instead of leaving it
+  // invisible (and re-creatable) here.
+  const [checkingActive, setCheckingActive] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setCheckingActive(true);
+      fetchMyActiveRequest()
+        .then((r) => {
+          if (!active) return;
+          if (r && r.status === 'searching') {
+            navigation.navigate('Searching', { requestId: r.id, category: r.categoryId });
+          } else if (r) {
+            navigation.navigate('Tracking', { requestId: r.id });
+          } else {
+            setCheckingActive(false);
+          }
+        })
+        .catch(() => {
+          if (active) setCheckingActive(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, [navigation])
+  );
 
   const locationText = denied
     ? 'Yer icazəsi lazımdır'
@@ -30,6 +59,14 @@ export function HomeScreen({ navigation }: Props) {
     : locLoading
     ? 'Yer alınır…'
     : 'Yer təyin olunmayıb';
+
+  if (checkingActive) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator color={colors.amber} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -90,6 +127,7 @@ export function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
   pinCenter: {
     position: 'absolute',

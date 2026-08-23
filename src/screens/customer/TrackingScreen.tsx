@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,10 +10,12 @@ import { Card } from '../../components/Card';
 import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { StatusStepper } from '../../components/StatusStepper';
 import { useCategories } from '../../context/CategoriesContext';
-import { fetchRequestDetail, RequestDetail } from '../../lib/api';
+import { cancelActiveJob, fetchRequestDetail, RequestDetail } from '../../lib/api';
 import { distanceKm, etaMinutes } from '../../lib/location';
 import { RequestStatus } from '../../lib/api';
 import { CustomerStackParamList } from '../../navigation/types';
+
+const CANCELLABLE: RequestStatus[] = ['accepted', 'en_route', 'arrived'];
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Tracking'>;
 
@@ -38,6 +40,7 @@ export function TrackingScreen({ route, navigation }: Props) {
   const { getCategory } = useCategories();
   const [detail, setDetail] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +80,27 @@ export function TrackingScreen({ route, navigation }: Props) {
   const km = hasLive
     ? distanceKm(detail.providerLat!, detail.providerLng!, detail.pickupLat!, detail.pickupLng!)
     : null;
+  const canCancel = CANCELLABLE.includes(detail.status);
+
+  const onCancel = () => {
+    Alert.alert('Sifarişi ləğv et', 'Ustanı ləğv etmək istəyirsən? Bu geri qaytarıla bilməz.', [
+      { text: 'Yox', style: 'cancel' },
+      {
+        text: 'Ləğv et',
+        style: 'destructive',
+        onPress: async () => {
+          setCancelling(true);
+          try {
+            await cancelActiveJob(requestId);
+            navigation.popToTop();
+          } catch (e: any) {
+            setCancelling(false);
+            Alert.alert('Xəta', e?.message ?? 'Ləğv edilmədi. Yenidən cəhd et.');
+          }
+        },
+      },
+    ]);
+  };
 
   const markers: LiveMapMarker[] = [];
   if (detail.pickupLat != null && detail.pickupLng != null) {
@@ -142,6 +166,11 @@ export function TrackingScreen({ route, navigation }: Props) {
             />
           ) : detail.status === 'cancelled' ? (
             <Button label="Ana səhifəyə qayıt" variant="secondary" onPress={() => navigation.popToTop()} />
+          ) : canCancel ? (
+            <Pressable style={styles.cancelLink} onPress={onCancel} disabled={cancelling}>
+              <Feather name="x" size={14} color={colors.textDim} />
+              <Text style={styles.cancelLinkText}>Ləğv et</Text>
+            </Pressable>
           ) : null}
         </View>
       </SafeAreaView>
@@ -195,4 +224,6 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
   priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
+  cancelLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  cancelLinkText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
 });

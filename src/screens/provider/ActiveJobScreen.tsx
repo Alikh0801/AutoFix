@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Linking, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Linking, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ import { useCategories } from '../../context/CategoriesContext';
 import {
   fetchMyActiveJob,
   advanceJob,
+  cancelActiveJob,
   completeJob,
   setProviderStatus,
   ActiveJob,
@@ -47,6 +48,7 @@ export function ActiveJobScreen({ navigation }: Props) {
   // once, so re-expanding it manually doesn't get overridden on the next poll.
   const [expanded, setExpanded] = useState(true);
   const autoCollapsedRef = useRef(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const load = () => fetchMyActiveJob().then(setJob).catch(() => {}).finally(() => setLoading(false));
 
@@ -127,6 +129,26 @@ export function ActiveJobScreen({ navigation }: Props) {
     }
   };
 
+  const onCancel = () => {
+    Alert.alert('İşdən imtina et', 'Bu işi ləğv etmək istəyirsən? Bu geri qaytarıla bilməz.', [
+      { text: 'Yox', style: 'cancel' },
+      {
+        text: 'İmtina et',
+        style: 'destructive',
+        onPress: async () => {
+          setCancelling(true);
+          try {
+            await cancelActiveJob(job.id);
+            navigation.replace('ProviderTabs');
+          } catch (e: any) {
+            setCancelling(false);
+            Alert.alert('Xəta', e?.message ?? 'Ləğv edilmədi. Yenidən cəhd et.');
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       <LiveMap style={styles.map} markers={markers} bottomInset={expanded ? 360 : 120} />
@@ -199,6 +221,13 @@ export function ActiveJobScreen({ navigation }: Props) {
           ) : (
             <Button label="İşi tamamladım" onPress={onComplete} loading={busy} />
           )}
+
+          {step ? (
+            <Pressable style={styles.cancelLink} onPress={onCancel} disabled={cancelling}>
+              <Feather name="x" size={14} color={colors.textDim} />
+              <Text style={styles.cancelLinkText}>İşdən imtina et</Text>
+            </Pressable>
+          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -255,4 +284,6 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
   priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
+  cancelLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 4 },
+  cancelLinkText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
 });

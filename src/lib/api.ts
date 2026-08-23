@@ -183,6 +183,27 @@ export async function cancelRequest(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export interface MyActiveRequest {
+  id: string;
+  status: RequestStatus;
+  categoryId: ServiceCategoryId;
+}
+
+/** Whatever open/in-flight request the signed-in customer already has, if any. */
+export async function fetchMyActiveRequest(): Promise<MyActiveRequest | null> {
+  const { data, error } = await supabase.rpc('my_active_request');
+  if (error) throw error;
+  const r = (data ?? [])[0];
+  if (!r) return null;
+  return { id: r.id, status: r.status as RequestStatus, categoryId: r.category_id as ServiceCategoryId };
+}
+
+/** Cancel a request that's been accepted but not yet worked on — either the customer or the assigned provider may call this. */
+export async function cancelActiveJob(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_active_job', { p_request_id: requestId });
+  if (error) throw error;
+}
+
 export interface RequestOffer {
   id: string;
   providerId: string;
