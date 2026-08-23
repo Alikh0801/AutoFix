@@ -7,8 +7,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { StatusStepper } from '../../components/StatusStepper';
 import { useCategories } from '../../context/CategoriesContext';
 import { fetchRequestDetail, RequestDetail } from '../../lib/api';
@@ -79,21 +78,17 @@ export function TrackingScreen({ route, navigation }: Props) {
     ? distanceKm(detail.providerLat!, detail.providerLng!, detail.pickupLat!, detail.pickupLng!)
     : null;
 
+  const markers: LiveMapMarker[] = [];
+  if (detail.pickupLat != null && detail.pickupLng != null) {
+    markers.push({ id: 'you', lat: detail.pickupLat, lng: detail.pickupLng, variant: 'you' });
+  }
+  if (hasLive) {
+    markers.push({ id: 'usta', lat: detail.providerLat!, lng: detail.providerLng!, variant: 'usta' });
+  }
+
   return (
     <View style={styles.container}>
-      <MapMock style={styles.map}>
-        <View style={[styles.pin, { top: '48%', left: '50%', marginLeft: -22, marginTop: -22 }]}>
-          <MapPin variant="you" size={44} />
-        </View>
-        <View
-          style={[
-            styles.pin,
-            { top: enRoute ? '22%' : '48%', left: enRoute ? '26%' : '50%', marginLeft: -20, marginTop: -20 },
-          ]}
-        >
-          <MapPin variant="usta" size={40} />
-        </View>
-      </MapMock>
+      <LiveMap style={styles.map} markers={markers} />
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
@@ -158,7 +153,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
-  pin: { position: 'absolute' },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheetInner: {
     backgroundColor: colors.bg,
