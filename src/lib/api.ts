@@ -273,6 +273,10 @@ export interface ActiveJob {
   pickupLat: number | null;
   pickupLng: number | null;
   customerName: string | null;
+  customerPhone: string | null;
+  customerRating: number | null;
+  customerRatingCount: number;
+  customerVehicleLabel: string | null;
 }
 
 export async function fetchMyActiveJob(): Promise<ActiveJob | null> {
@@ -291,6 +295,12 @@ export async function fetchMyActiveJob(): Promise<ActiveJob | null> {
     pickupLat: r.pickup_lat != null ? Number(r.pickup_lat) : null,
     pickupLng: r.pickup_lng != null ? Number(r.pickup_lng) : null,
     customerName: r.customer_name,
+    customerPhone: r.customer_phone ?? null,
+    customerRating: r.customer_rating != null ? Number(r.customer_rating) : null,
+    customerRatingCount: r.customer_rating_count != null ? Number(r.customer_rating_count) : 0,
+    customerVehicleLabel: [[r.vehicle_make, r.vehicle_model].filter(Boolean).join(' '), r.vehicle_plate]
+      .filter(Boolean)
+      .join(' · ') || null,
   };
 }
 

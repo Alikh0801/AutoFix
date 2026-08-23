@@ -8,6 +8,7 @@ import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
+import { RatingStars } from '../../components/RatingStars';
 import { StatusStepper } from '../../components/StatusStepper';
 import { useCategories } from '../../context/CategoriesContext';
 import {
@@ -22,6 +23,11 @@ import { getCurrentLocation } from '../../lib/location';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ActiveJob'>;
+
+function initials(name: string | null): string {
+  if (!name) return 'M';
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
 
 const nextStep: Partial<Record<RequestStatus, { label: string; to: 'en_route' | 'arrived' | 'in_progress' }>> = {
   accepted: { label: 'Yola çıxdım', to: 'en_route' },
@@ -119,18 +125,42 @@ export function ActiveJobScreen({ navigation }: Props) {
 
           <Card>
             <View style={styles.row}>
-              <View style={styles.icon}>
-                <Feather name={(category?.icon as any) ?? 'tool'} size={18} color={colors.amber} />
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials(job.customerName)}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>{job.customerName ?? 'Müştəri'}</Text>
-                <Text style={styles.address} numberOfLines={1}>
-                  {job.address ?? 'Ünvan göstərilməyib'}
-                </Text>
+                <View style={styles.metaRow}>
+                  <RatingStars value={Math.round(job.customerRating ?? 5)} size={11} />
+                  <Text style={styles.metaText}>
+                    {job.customerRatingCount > 0 ? job.customerRating!.toFixed(1) : 'Yeni'}
+                  </Text>
+                  {job.customerVehicleLabel ? (
+                    <>
+                      <Text style={styles.metaDot}>·</Text>
+                      <Text style={styles.metaText} numberOfLines={1}>
+                        {job.customerVehicleLabel}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
               </View>
-              <Pressable onPress={() => Linking.openURL('tel:')} style={styles.callBtn}>
+              <Pressable
+                onPress={() => job.customerPhone && Linking.openURL(`tel:${job.customerPhone}`)}
+                style={[styles.callBtn, !job.customerPhone && styles.callBtnDisabled]}
+                disabled={!job.customerPhone}
+              >
                 <Feather name="phone" size={16} color={colors.bg} />
               </Pressable>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.addressRow}>
+              <Feather name={(category?.icon as any) ?? 'tool'} size={14} color={colors.amber} />
+              <Text style={styles.address} numberOfLines={1}>
+                {job.address ?? 'Ünvan göstərilməyib'}
+              </Text>
             </View>
             {job.note ? <Text style={styles.note}>{job.note}</Text> : null}
             <View style={styles.divider} />
@@ -173,16 +203,21 @@ const styles = StyleSheet.create({
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  icon: {
+  avatar: {
     width: 42,
     height: 42,
-    borderRadius: 13,
-    backgroundColor: colors.amberSoft,
+    borderRadius: 21,
+    backgroundColor: colors.amber,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.bg },
   title: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
-  address: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  metaText: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim },
+  metaDot: { color: colors.textFaint, fontSize: 11 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  address: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: colors.textDim },
   callBtn: {
     width: 38,
     height: 38,
@@ -191,6 +226,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  callBtnDisabled: { backgroundColor: colors.amberDim, opacity: 0.5 },
   note: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 12, lineHeight: 18 },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 14 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
