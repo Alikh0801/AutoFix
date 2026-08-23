@@ -59,7 +59,7 @@ export function SearchingScreen({ route, navigation }: Props) {
     };
     refetch();
 
-    // Live-update as providers place or change offers on this request.
+    // Live-update as providers place, edit, or withdraw offers on this request.
     const channel = supabase
       .channel(`offers-${requestId}`)
       .on(
@@ -69,8 +69,13 @@ export function SearchingScreen({ route, navigation }: Props) {
       )
       .subscribe();
 
+    // Belt-and-suspenders poll, same as elsewhere in the app — a missed or
+    // delayed Realtime event shouldn't leave a withdrawn offer stuck on screen.
+    const t = setInterval(refetch, 4000);
+
     return () => {
       active = false;
+      clearInterval(t);
       supabase.removeChannel(channel);
     };
   }, [requestId]);
