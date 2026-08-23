@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Linking, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -41,6 +41,12 @@ export function ActiveJobScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
+  // Full details are useful right when a job is accepted; once the provider
+  // is actually driving, the card just eats map space, so collapse it
+  // automatically the first time status moves past "accepted" — but only
+  // once, so re-expanding it manually doesn't get overridden on the next poll.
+  const [expanded, setExpanded] = useState(true);
+  const autoCollapsedRef = useRef(false);
 
   const load = () => fetchMyActiveJob().then(setJob).catch(() => {}).finally(() => setLoading(false));
 
@@ -63,6 +69,13 @@ export function ActiveJobScreen({ navigation }: Props) {
       clearInterval(loc);
     };
   }, []);
+
+  useEffect(() => {
+    if (job && job.status !== 'accepted' && !autoCollapsedRef.current) {
+      autoCollapsedRef.current = true;
+      setExpanded(false);
+    }
+  }, [job?.status]);
 
   if (loading) {
     return (
@@ -116,62 +129,70 @@ export function ActiveJobScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <LiveMap style={styles.map} markers={markers} />
+      <LiveMap style={styles.map} markers={markers} bottomInset={expanded ? 360 : 120} />
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
-          <View style={styles.sheetHandle} />
-          <StatusStepper current={job.status as any} />
+          <Pressable style={styles.handleRow} onPress={() => setExpanded((e) => !e)}>
+            <View style={styles.sheetHandle} />
+            <Feather name={expanded ? 'chevron-down' : 'chevron-up'} size={16} color={colors.textDim} />
+          </Pressable>
 
-          <Card>
-            <View style={styles.row}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials(job.customerName)}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{job.customerName ?? 'Müştəri'}</Text>
-                <View style={styles.metaRow}>
-                  <RatingStars value={Math.round(job.customerRating ?? 5)} size={11} />
-                  <Text style={styles.metaText}>
-                    {job.customerRatingCount > 0 ? job.customerRating!.toFixed(1) : 'Yeni'}
-                  </Text>
-                  {job.customerVehicleLabel ? (
-                    <>
-                      <Text style={styles.metaDot}>·</Text>
-                      <Text style={styles.metaText} numberOfLines={1}>
-                        {job.customerVehicleLabel}
+          {expanded && (
+            <>
+              <StatusStepper current={job.status as any} />
+
+              <Card>
+                <View style={styles.row}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initials(job.customerName)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.title}>{job.customerName ?? 'Müştəri'}</Text>
+                    <View style={styles.metaRow}>
+                      <RatingStars value={Math.round(job.customerRating ?? 5)} size={11} />
+                      <Text style={styles.metaText}>
+                        {job.customerRatingCount > 0 ? job.customerRating!.toFixed(1) : 'Yeni'}
                       </Text>
-                    </>
-                  ) : null}
+                      {job.customerVehicleLabel ? (
+                        <>
+                          <Text style={styles.metaDot}>·</Text>
+                          <Text style={[styles.metaText, styles.metaVehicle]} numberOfLines={1}>
+                            {job.customerVehicleLabel}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={() => job.customerPhone && Linking.openURL(`tel:${job.customerPhone}`)}
+                    style={[styles.callBtn, !job.customerPhone && styles.callBtnDisabled]}
+                    disabled={!job.customerPhone}
+                  >
+                    <Feather name="phone" size={16} color={colors.bg} />
+                  </Pressable>
                 </View>
-              </View>
-              <Pressable
-                onPress={() => job.customerPhone && Linking.openURL(`tel:${job.customerPhone}`)}
-                style={[styles.callBtn, !job.customerPhone && styles.callBtnDisabled]}
-                disabled={!job.customerPhone}
-              >
-                <Feather name="phone" size={16} color={colors.bg} />
-              </Pressable>
-            </View>
 
-            <View style={styles.divider} />
+                <View style={styles.divider} />
 
-            <View style={styles.addressRow}>
-              <Feather name={(category?.icon as any) ?? 'tool'} size={14} color={colors.amber} />
-              <Text style={styles.address} numberOfLines={1}>
-                {job.address ?? 'Ünvan göstərilməyib'}
-              </Text>
-            </View>
-            {job.note ? <Text style={styles.note}>{job.note}</Text> : null}
-            <View style={styles.divider} />
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>{category?.title ?? 'Xidmət'}</Text>
-              <Text style={styles.priceValue}>
-                {job.agreedPrice != null ? `${job.agreedPrice} AZN` : '—'} ·{' '}
-                {job.paymentMethod === 'card' ? 'Kart' : 'Nağd'}
-              </Text>
-            </View>
-          </Card>
+                <View style={styles.addressRow}>
+                  <Feather name={(category?.icon as any) ?? 'tool'} size={14} color={colors.amber} />
+                  <Text style={styles.address} numberOfLines={1}>
+                    {job.address ?? 'Ünvan göstərilməyib'}
+                  </Text>
+                </View>
+                {job.note ? <Text style={styles.note}>{job.note}</Text> : null}
+                <View style={styles.divider} />
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>{category?.title ?? 'Xidmət'}</Text>
+                  <Text style={styles.priceValue}>
+                    {job.agreedPrice != null ? `${job.agreedPrice} AZN` : '—'} ·{' '}
+                    {job.paymentMethod === 'card' ? 'Kart' : 'Nağd'}
+                  </Text>
+                </View>
+              </Card>
+            </>
+          )}
 
           {step ? (
             <Button label={step.label} onPress={onAdvance} loading={busy} />
@@ -201,7 +222,8 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 18,
   },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center' },
+  handleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 2 },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 42,
@@ -215,6 +237,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   metaText: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim },
+  metaVehicle: { flexShrink: 1 },
   metaDot: { color: colors.textFaint, fontSize: 11 },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   address: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: colors.textDim },
