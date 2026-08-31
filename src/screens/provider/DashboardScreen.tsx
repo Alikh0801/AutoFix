@@ -162,10 +162,9 @@ export function DashboardScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <LiveMap style={styles.map} markers={markers} bottomInset={28}>
-        {!isOnline && <View style={styles.mapDim} pointerEvents="none" />}
-        <SafeAreaView edges={['top']} style={styles.topBar}>
-          <View style={styles.greetChip}>
+      <SafeAreaView edges={['top']} style={styles.header}>
+        <View style={styles.topBar}>
+          <View style={{ flexShrink: 1 }}>
             <Text style={styles.greeting} numberOfLines={1}>
               Salam, {firstName(profile?.fullName)}
             </Text>
@@ -182,8 +181,10 @@ export function DashboardScreen({ navigation }: Props) {
               thumbColor={isOnline ? colors.amber : colors.textFaint}
             />
           </View>
-        </SafeAreaView>
-      </LiveMap>
+        </View>
+      </SafeAreaView>
+
+      <LiveMap style={styles.map} markers={markers} bottomInset={28} />
 
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
@@ -283,42 +284,20 @@ export function DashboardScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  // The greeting and online switch float over the map rather than taking a
-  // slice of height above it, so the map itself gets the whole area.
+  header: { backgroundColor: colors.bg },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  greetChip: {
-    flexShrink: 1,
-    backgroundColor: 'rgba(23,27,34,0.92)',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  greeting: { fontFamily: fonts.headingMedium, fontSize: 16, color: colors.cream },
-  status: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim, marginTop: 2 },
-  onlineToggle: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(23,27,34,0.92)',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 999,
-    paddingLeft: 12,
-    paddingRight: 8,
-    paddingVertical: 4,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
+  greeting: { fontFamily: fonts.headingMedium, fontSize: 18, color: colors.cream },
+  status: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
+  onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   map: { flex: 1 },
-  mapDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,17,22,0.55)' },
   // Fixed share of the screen rather than flex:1 — the list scrolls inside it,
   // so an empty feed no longer leaves half the screen blank while the map is
   // squeezed into a strip.
