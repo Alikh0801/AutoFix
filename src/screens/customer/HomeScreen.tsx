@@ -73,10 +73,10 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <LiveMap style={styles.map} markers={markers} bottomInset={44}>
-        <SafeAreaView edges={['top']} style={styles.topBar}>
-          <View style={styles.locationChip}>
-            <Feather name="map-pin" size={13} color={colors.amber} />
+      <SafeAreaView edges={['top']} style={styles.header}>
+        <View style={styles.topBar}>
+          <View style={styles.locationRow}>
+            <Feather name="map-pin" size={14} color={colors.amber} />
             <Text style={styles.locationText} numberOfLines={1}>
               {locationText}
             </Text>
@@ -84,8 +84,10 @@ export function HomeScreen({ navigation }: Props) {
           <Pressable style={styles.avatarChip}>
             <Feather name="user" size={16} color={colors.cream} />
           </Pressable>
-        </SafeAreaView>
-      </LiveMap>
+        </View>
+      </SafeAreaView>
+
+      <LiveMap style={styles.map} markers={markers} bottomInset={44} />
 
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
@@ -129,31 +131,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
+  header: { backgroundColor: colors.bg },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 4,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  locationChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(23,27,34,0.9)',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    maxWidth: '78%',
-  },
-  locationText: { fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.cream },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
+  locationText: { flexShrink: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
   avatarChip: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(23,27,34,0.9)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
     alignItems: 'center',
