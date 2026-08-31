@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { useCategories } from '../../context/CategoriesContext';
+import { useLocation } from '../../context/LocationContext';
 import { supabase } from '../../lib/supabase';
 import { fetchOfferStatus, withdrawOffer } from '../../lib/api';
 import { ProviderStackParamList } from '../../navigation/types';
@@ -15,20 +15,12 @@ import { ProviderStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<ProviderStackParamList, 'OfferPending'>;
 
 export function OfferPendingScreen({ route, navigation }: Props) {
-  const { requestId, categoryId, address, price } = route.params;
+  const { requestId, categoryId, address, price, pickupLat, pickupLng } = route.params;
   const { getCategory } = useCategories();
+  const { location } = useLocation();
   const category = getCategory(categoryId);
-  const pulse = useRef(new Animated.Value(0)).current;
   const [withdrawing, setWithdrawing] = useState(false);
   const settledRef = useRef(false);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(pulse, { toValue: 1, duration: 1800, easing: Easing.out(Easing.ease), useNativeDriver: true })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
 
   // Poll (and listen live) for what happened to this offer: accepted -> jump
   // straight into the active job, closed -> customer picked someone else,
@@ -112,17 +104,15 @@ export function OfferPendingScreen({ route, navigation }: Props) {
     ]);
   };
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.8] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
+  const markers: LiveMapMarker[] = [];
+  if (location) markers.push({ id: 'me', lat: location.lat, lng: location.lng, variant: 'usta' });
+  if (pickupLat != null && pickupLng != null) {
+    markers.push({ id: 'dest', lat: pickupLat, lng: pickupLng, variant: 'destination' });
+  }
 
   return (
     <View style={styles.container}>
-      <MapMock style={styles.map} dimmed>
-        <View style={styles.pinCenter}>
-          <Animated.View style={[styles.ring, { transform: [{ scale }], opacity }]} />
-          <MapPin variant="usta" size={44} />
-        </View>
-      </MapMock>
+      <LiveMap style={styles.map} markers={markers} bottomInset={230} />
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
         <View style={styles.card}>
@@ -168,16 +158,6 @@ function LoadingDot({ delay }: { delay: number }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   map: { flex: 1 },
-  pinCenter: {
-    position: 'absolute',
-    top: '38%',
-    left: '50%',
-    marginLeft: -22,
-    marginTop: -22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ring: { position: 'absolute', width: 44, height: 44, borderRadius: 22, backgroundColor: colors.amber },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   card: {
     margin: 16,

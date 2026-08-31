@@ -60,6 +60,8 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
         categoryId: request.categoryId,
         address: request.address,
         price: value,
+        pickupLat: request.pickupLat,
+        pickupLng: request.pickupLng,
       });
     } catch (e: any) {
       setError(e?.message ?? 'Təklif göndərilmədi. Yenidən cəhd et.');

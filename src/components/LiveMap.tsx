@@ -27,10 +27,11 @@ interface LiveMapProps {
 // Leaflet + standard OpenStreetMap tiles, loaded from CDN inside a WebView —
 // no API key, no account, no dev build (react-native-webview ships inside
 // Expo Go, unlike react-native-maps / expo-maps which both require one).
-// A CSS filter approximates a dark map instead of relying on a tile
-// provider's own dark style, since those (e.g. CARTO's free "dark_all")
-// increasingly gate anonymous access — when tiles fail to load there, all
-// you see is the page's background colour, i.e. a solid black screen.
+// Tiles render in their natural light style: OSM's own cartography is the
+// most legible option here, and a free provider-hosted dark style isn't
+// dependable (CARTO's "dark_all" increasingly gates anonymous access, and
+// when its tiles fail all you see is the page background). Markers carry a
+// white halo so they stay readable against light streets.
 // This is the "free tier" live map; swap the tile layer for Google Maps
 // once that migration happens.
 const MAP_HTML = `<!doctype html>
@@ -39,11 +40,13 @@ const MAP_HTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  html, body, #map { height: 100%; margin: 0; padding: 0; background: #171B22; }
-  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9); }
-  .leaflet-control-attribution { font-size: 8px; background: rgba(14,17,22,0.6) !important; color: #5B6570 !important; }
-  .leaflet-control-attribution a { color: #93A0AC !important; }
-  .jolt-pin { display:flex; align-items:center; justify-content:center; border-radius:999px; box-shadow: 0 0 0 3px rgba(0,0,0,0.35); }
+  html, body, #map { height: 100%; margin: 0; padding: 0; background: #EDEBE6; }
+  .leaflet-control-attribution { font-size: 8px; background: rgba(255,255,255,0.7) !important; color: #6B7280 !important; }
+  .leaflet-control-attribution a { color: #4B5563 !important; }
+  .jolt-pin {
+    display:flex; align-items:center; justify-content:center; border-radius:999px;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.95), 0 2px 6px rgba(0,0,0,0.3);
+  }
 </style>
 </head>
 <body>
@@ -210,7 +213,8 @@ export function LiveMap({
 }
 
 const styles = StyleSheet.create({
-  wrap: { overflow: 'hidden', backgroundColor: colors.surface2 },
+  // Matches the map page's own background so there's no dark flash while tiles load.
+  wrap: { overflow: 'hidden', backgroundColor: '#EDEBE6' },
   web: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
   recenterBtn: {
     position: 'absolute',

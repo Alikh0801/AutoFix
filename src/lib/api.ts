@@ -449,6 +449,8 @@ export interface ProviderFeedItem {
   paymentMethod: 'cash' | 'card';
   distanceKm: number;
   createdAt: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
   myOfferPrice: number | null;
   myOfferNote: string | null;
   customerName: string | null;
@@ -469,6 +471,8 @@ export async function fetchProviderFeed(lat: number, lng: number, radiusM = 8000
     paymentMethod: r.payment_method as 'cash' | 'card',
     distanceKm: Math.round((Number(r.distance_m) / 1000) * 10) / 10,
     createdAt: r.created_at,
+    pickupLat: r.pickup_lat != null ? Number(r.pickup_lat) : null,
+    pickupLng: r.pickup_lng != null ? Number(r.pickup_lng) : null,
     myOfferPrice: r.my_offer_price != null ? Number(r.my_offer_price) : null,
     myOfferNote: r.my_offer_note ?? null,
     customerName: r.customer_name ?? null,

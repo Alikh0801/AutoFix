@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Switch, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -8,8 +8,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { RatingStars } from '../../components/RatingStars';
 import { ProviderStackParamList, ProviderTabParamList } from '../../navigation/types';
 import { useApp } from '../../context/AppContext';
@@ -38,12 +37,6 @@ type Props = CompositeScreenProps<
   BottomTabScreenProps<ProviderTabParamList, 'Dashboard'>,
   NativeStackScreenProps<ProviderStackParamList>
 >;
-
-const feedPinPositions = [
-  { top: '22%', left: '30%' },
-  { top: '55%', left: '70%' },
-  { top: '68%', left: '28%' },
-] as const;
 
 export function DashboardScreen({ navigation }: Props) {
   const { isOnline, setIsOnline } = useApp();
@@ -153,6 +146,20 @@ export function DashboardScreen({ navigation }: Props) {
     return () => clearInterval(t);
   }, [isOnline, loadFeed]);
 
+  // Memoised: a fresh array each render would re-post to the WebView every time.
+  const markers = useMemo<LiveMapMarker[]>(() => {
+    const out: LiveMapMarker[] = [];
+    if (location) out.push({ id: 'me', lat: location.lat, lng: location.lng, variant: 'usta' });
+    if (isOnline) {
+      for (const r of feed) {
+        if (r.pickupLat != null && r.pickupLng != null) {
+          out.push({ id: r.id, lat: r.pickupLat, lng: r.pickupLng, variant: 'destination' });
+        }
+      }
+    }
+    return out;
+  }, [location, isOnline, feed]);
+
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.topWrap}>
@@ -174,23 +181,9 @@ export function DashboardScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <MapMock style={styles.map} dimmed={!isOnline}>
-          <View style={[styles.pin, { top: '45%', left: '50%', marginLeft: -20, marginTop: -20 }]}>
-            <MapPin variant="usta" size={40} />
-          </View>
-          {isOnline &&
-            feed.slice(0, 3).map((r, i) => (
-              <View
-                key={r.id}
-                style={[
-                  styles.pin,
-                  { top: feedPinPositions[i].top, left: feedPinPositions[i].left, marginLeft: -16, marginTop: -16 },
-                ]}
-              >
-                <MapPin variant="destination" size={32} />
-              </View>
-            ))}
-        </MapMock>
+        <LiveMap style={styles.map} markers={markers}>
+          {!isOnline && <View style={styles.mapDim} pointerEvents="none" />}
+        </LiveMap>
       </SafeAreaView>
 
       <View style={styles.sheet}>
@@ -304,7 +297,7 @@ const styles = StyleSheet.create({
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   map: { flex: 1 },
-  pin: { position: 'absolute' },
+  mapDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,17,22,0.55)' },
   sheet: {
     flex: 1,
     backgroundColor: colors.bg,

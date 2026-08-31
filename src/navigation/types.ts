@@ -26,7 +26,14 @@ export type CustomerTabParamList = {
 export type ProviderStackParamList = {
   ProviderTabs: undefined;
   IncomingRequest: { request: ProviderFeedItem };
-  OfferPending: { requestId: string; categoryId: ServiceCategoryId; address: string | null; price: number };
+  OfferPending: {
+    requestId: string;
+    categoryId: ServiceCategoryId;
+    address: string | null;
+    price: number;
+    pickupLat: number | null;
+    pickupLng: number | null;
+  };
   ActiveJob: { requestId: string };
   Rating: { requestId: string; rateeLabel: string };
   ProviderServices: undefined;
