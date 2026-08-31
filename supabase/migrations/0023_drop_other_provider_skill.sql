@@ -7,9 +7,8 @@
 -- forever with no way to see or turn it off, and would keep receiving those
 -- requests while nobody else could.
 --
--- NOTE: no provider can hold this skill any more, and provider_feed only shows
--- a request whose category matches one of the caller's skills — so 'Digər'
--- requests reach nobody. Either hide that category from customers too, or make
--- it visible to every provider regardless of skills.
+-- The customer keeps the category — it's their escape hatch when nothing else
+-- fits. Since no provider can hold the matching skill any more, 0024 exempts
+-- 'other' from provider_feed's skill matching so every provider sees it.
 
 delete from provider_skills where category_id = 'other';
