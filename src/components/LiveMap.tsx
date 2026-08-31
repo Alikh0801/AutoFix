@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Pressable, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import React, { PropsWithChildren, useEffect, useRef } from 'react';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { colors } from '../theme/colors';
@@ -18,6 +18,10 @@ interface LiveMapProps {
   style?: StyleProp<ViewStyle>;
   /** Extra bottom padding (px) so auto-fit keeps markers clear of an overlaid sheet/card. */
   bottomInset?: number;
+  /** False for a small preview: no pan/zoom, no recenter button. Defaults to true. */
+  interactive?: boolean;
+  /** Fixed zoom for a single marker; higher is closer. Defaults to a ~300m box. */
+  soloZoomDelta?: number;
 }
 
 // Leaflet + standard OpenStreetMap tiles, loaded from CDN inside a WebView —
@@ -56,6 +60,7 @@ const MAP_HTML = `<!doctype html>
   var markersById = {};
   var lastMarkers = [];
   var lastBottomInset = 0;
+  var lastSoloDelta = 0.0015;
   // Auto-fit should get out of the user's way the moment they pan/zoom by
   // hand — otherwise the next marker update yanks the view back mid-gesture.
   // "programmatic" distinguishes our own fitBounds/setView calls (which also
@@ -67,12 +72,19 @@ const MAP_HTML = `<!doctype html>
     if (!programmatic) userInteracted = true;
   });
 
+  function setInteractive(on) {
+    ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'].forEach(function (h) {
+      if (!map[h]) return;
+      if (on) { map[h].enable(); } else { map[h].disable(); }
+    });
+  }
+
   function fitToMarkers(markers, bottomInset) {
     if (!markers.length) return;
     var pts = markers.map(function (m) { return [m.lat, m.lng]; });
     var bounds;
     if (pts.length === 1) {
-      var d = 0.0015;
+      var d = lastSoloDelta;
       bounds = L.latLngBounds([pts[0][0] - d, pts[0][1] - d], [pts[0][0] + d, pts[0][1] + d]);
     } else {
       bounds = L.latLngBounds(pts);
@@ -127,6 +139,8 @@ const MAP_HTML = `<!doctype html>
     try {
       var msg = JSON.parse(event.data);
       if (msg.type === 'markers') {
+        if (typeof msg.soloDelta === 'number') lastSoloDelta = msg.soloDelta;
+        setInteractive(msg.interactive !== false);
         applyMarkers(msg.markers, msg.bottomInset);
       } else if (msg.type === 'recenter') {
         userInteracted = false;
@@ -141,27 +155,38 @@ const MAP_HTML = `<!doctype html>
 </html>`;
 
 /** Real, free live map (Leaflet/OSM via WebView) — no API key, works in Expo Go. */
-export function LiveMap({ markers, style, bottomInset = 0 }: LiveMapProps) {
+export function LiveMap({
+  markers,
+  style,
+  bottomInset = 0,
+  interactive = true,
+  soloZoomDelta = 0.0015,
+  children,
+}: PropsWithChildren<LiveMapProps>) {
   const ref = useRef<WebView>(null);
   const readyRef = useRef(false);
 
   const send = () => {
     if (!readyRef.current) return;
-    ref.current?.postMessage(JSON.stringify({ type: 'markers', markers, bottomInset }));
+    ref.current?.postMessage(
+      JSON.stringify({ type: 'markers', markers, bottomInset, interactive, soloDelta: soloZoomDelta })
+    );
   };
 
   useEffect(() => {
     send();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, bottomInset]);
+  }, [markers, bottomInset, interactive, soloZoomDelta]);
 
+  // Wrapped in a View so overlays and the recenter button anchor to the map
+  // area itself rather than whatever ancestor happens to be positioned.
   return (
-    <>
+    <View style={[styles.wrap, style]}>
       <WebView
         ref={ref}
         originWhitelist={['*']}
         source={{ html: MAP_HTML }}
-        style={style}
+        style={styles.web}
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled={false}
@@ -171,17 +196,22 @@ export function LiveMap({ markers, style, bottomInset = 0 }: LiveMapProps) {
           send();
         }}
       />
-      <Pressable
-        style={[styles.recenterBtn, { bottom: 16 + bottomInset }]}
-        onPress={() => ref.current?.postMessage(JSON.stringify({ type: 'recenter' }))}
-      >
-        <Feather name="crosshair" size={18} color={colors.amber} />
-      </Pressable>
-    </>
+      {children}
+      {interactive && (
+        <Pressable
+          style={[styles.recenterBtn, { bottom: 16 + bottomInset }]}
+          onPress={() => ref.current?.postMessage(JSON.stringify({ type: 'recenter' }))}
+        >
+          <Feather name="crosshair" size={18} color={colors.amber} />
+        </Pressable>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { overflow: 'hidden', backgroundColor: colors.surface2 },
+  web: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
   recenterBtn: {
     position: 'absolute',
     right: 16,

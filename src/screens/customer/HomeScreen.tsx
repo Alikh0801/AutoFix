@@ -7,8 +7,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { ServiceCategoryCard } from '../../components/ServiceCategoryCard';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
@@ -60,6 +59,10 @@ export function HomeScreen({ navigation }: Props) {
     ? 'Yer alınır…'
     : 'Yer təyin olunmayıb';
 
+  const markers: LiveMapMarker[] = location
+    ? [{ id: 'you', lat: location.lat, lng: location.lng, variant: 'you' }]
+    : [];
+
   if (checkingActive) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -70,10 +73,7 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <MapMock style={styles.map}>
-        <View style={styles.pinCenter}>
-          <MapPin variant="you" size={44} />
-        </View>
+      <LiveMap style={styles.map} markers={markers} bottomInset={44}>
         <SafeAreaView edges={['top']} style={styles.topBar}>
           <View style={styles.locationChip}>
             <Feather name="map-pin" size={13} color={colors.amber} />
@@ -85,7 +85,7 @@ export function HomeScreen({ navigation }: Props) {
             <Feather name="user" size={16} color={colors.cream} />
           </Pressable>
         </SafeAreaView>
-      </MapMock>
+      </LiveMap>
 
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
@@ -129,13 +129,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
-  pinCenter: {
-    position: 'absolute',
-    top: '42%',
-    left: '50%',
-    marginLeft: -22,
-    marginTop: -22,
-  },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -17,6 +17,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
 import { createRequest } from '../../lib/api';
@@ -99,6 +100,13 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
           </Card>
 
           <Text style={styles.label}>Ünvan</Text>
+          {location && (
+            <LiveMap
+              style={styles.mapPreview}
+              markers={[{ id: 'you', lat: location.lat, lng: location.lng, variant: 'you' } as LiveMapMarker]}
+              interactive={false}
+            />
+          )}
           <Pressable onPress={() => (denied || !location ? refresh() : undefined)}>
             <Card style={styles.rowCard} padded>
               {locLoading ? (
@@ -187,6 +195,13 @@ const styles = StyleSheet.create({
   categorySub: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 2 },
   categoryPrice: { fontFamily: fonts.monoSemi, fontSize: 11.5, color: colors.amber },
   label: { ...type.label, marginBottom: 8, marginTop: 4 },
+  mapPreview: {
+    height: 150,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 10,
+  },
   rowCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   rowText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
   payRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
