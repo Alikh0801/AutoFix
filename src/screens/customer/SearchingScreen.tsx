@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,10 +7,10 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { MapMock } from '../../components/MapMock';
-import { MapPin } from '../../components/MapPin';
+import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { RatingStars } from '../../components/RatingStars';
 import { useCategories } from '../../context/CategoriesContext';
+import { useLocation } from '../../context/LocationContext';
 import { supabase } from '../../lib/supabase';
 import { fetchRequestOffers, cancelRequest, acceptOffer, RequestOffer } from '../../lib/api';
 import { CustomerStackParamList } from '../../navigation/types';
@@ -25,8 +25,8 @@ function initials(name: string | null): string {
 export function SearchingScreen({ route, navigation }: Props) {
   const { requestId, category: categoryId } = route.params;
   const { getCategory } = useCategories();
+  const { location } = useLocation();
   const category = getCategory(categoryId);
-  const pulse = useRef(new Animated.Value(0)).current;
   const [offers, setOffers] = useState<RequestOffer[]>([]);
   const [cancelling, setCancelling] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -41,14 +41,6 @@ export function SearchingScreen({ route, navigation }: Props) {
       Alert.alert('Xəta', e?.message ?? 'Təklif qəbul edilmədi.');
     }
   };
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(pulse, { toValue: 1, duration: 1800, easing: Easing.out(Easing.ease), useNativeDriver: true })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
 
   useEffect(() => {
     let active = true;
@@ -80,8 +72,9 @@ export function SearchingScreen({ route, navigation }: Props) {
     };
   }, [requestId]);
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.8] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
+  const markers: LiveMapMarker[] = location
+    ? [{ id: 'you', lat: location.lat, lng: location.lng, variant: 'you' }]
+    : [];
 
   const onCancel = () => {
     Alert.alert('Sifarişi ləğv et', 'Bu sorğunu ləğv etmək istəyirsən?', [
@@ -104,12 +97,7 @@ export function SearchingScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <MapMock style={styles.map} dimmed>
-        <View style={styles.pinCenter}>
-          <Animated.View style={[styles.ring, { transform: [{ scale }], opacity }]} />
-          <MapPin variant="you" size={44} />
-        </View>
-      </MapMock>
+      <LiveMap style={styles.map} markers={markers} bottomInset={260} />
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
         <View style={styles.card}>
@@ -208,16 +196,6 @@ function LoadingDot({ delay }: { delay: number }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   map: { flex: 1 },
-  pinCenter: {
-    position: 'absolute',
-    top: '38%',
-    left: '50%',
-    marginLeft: -22,
-    marginTop: -22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ring: { position: 'absolute', width: 44, height: 44, borderRadius: 22, backgroundColor: colors.amber },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   card: {
     margin: 16,
