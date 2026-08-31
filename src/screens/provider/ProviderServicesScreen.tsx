@@ -18,8 +18,14 @@ import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ProviderServices'>;
 
+// "Digər" is a catch-all the customer picks when nothing else fits; it isn't a
+// piece of equipment a provider can claim to carry, so it's not offered as a
+// selectable skill here.
+const NOT_SELECTABLE: ServiceCategoryId[] = ['other'];
+
 export function ProviderServicesScreen({ navigation }: Props) {
-  const { categories } = useCategories();
+  const { categories: allCategories } = useCategories();
+  const categories = allCategories.filter((c) => !NOT_SELECTABLE.includes(c.id));
   const [selected, setSelected] = useState<Set<ServiceCategoryId>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<ServiceCategoryId | null>(null);
