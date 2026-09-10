@@ -1,0 +1,21 @@
+-- Jolt — close public write access to PostGIS's spatial_ref_sys.
+--
+-- Supabase's security advisor flags public.spatial_ref_sys as "RLS disabled in
+-- public". It isn't one of our tables: `create extension postgis` (0001)
+-- creates it in the public schema, and it holds the standard EPSG catalogue of
+-- coordinate systems — reference data, identical in every PostGIS database, no
+-- user data of any kind.
+--
+-- RLS can't be enabled on it (the table is owned by the extension, not us), and
+-- forcing it would risk breaking geography queries for a lookup table that is
+-- meant to be readable. So instead we remove the part that actually matters:
+-- the advisor's "anyone can edit and delete" half. SELECT stays — it's public
+-- reference data, and revoking it could break PostGIS internals.
+--
+-- Note the advisor warning itself may persist: the lint keys off the table's
+-- RLS flag, not its grants. The remaining exposure is read access to the EPSG
+-- catalogue. The only way to clear it fully is installing PostGIS into a
+-- non-exposed schema, which is not worth doing to a live database whose tables
+-- already have geography columns.
+
+revoke insert, update, delete, truncate on table public.spatial_ref_sys from anon, authenticated;
