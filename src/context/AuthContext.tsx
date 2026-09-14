@@ -26,6 +26,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // a session. We derive a fixed password from the phone number itself so it
 // never has to be shown to (or chosen by) the user. Replace this with
 // signInWithOtp/verifyOtp once a real SMS provider is wired up in production.
+//
+// The "jolt-" prefix predates the rename to AutoFix and deliberately stays:
+// it is the salt every existing test account's stored password was derived
+// from, so changing it would lock all of them out. It is invisible to users
+// and disappears entirely with the switch to OTP.
 function testModePassword(phoneE164: string): string {
   return `jolt-test-${phoneE164}`;
 }

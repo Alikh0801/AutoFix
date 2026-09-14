@@ -43,7 +43,7 @@ const MAP_HTML = `<!doctype html>
   html, body, #map { height: 100%; margin: 0; padding: 0; background: #EDEBE6; }
   .leaflet-control-attribution { font-size: 8px; background: rgba(255,255,255,0.7) !important; color: #6B7280 !important; }
   .leaflet-control-attribution a { color: #4B5563 !important; }
-  .jolt-pin {
+  .map-pin {
     display:flex; align-items:center; justify-content:center; border-radius:999px;
     box-shadow: 0 0 0 3px rgba(255,255,255,0.95), 0 2px 6px rgba(0,0,0,0.3);
   }
@@ -110,7 +110,7 @@ const MAP_HTML = `<!doctype html>
     var size = variant === 'you' ? 20 : 32;
     return L.divIcon({
       className: '',
-      html: '<div class="jolt-pin" style="width:' + size + 'px;height:' + size + 'px;background:' + conf.bg + ';font-size:' + Math.round(size * 0.55) + 'px;">' + conf.glyph + '</div>',
+      html: '<div class="map-pin" style="width:' + size + 'px;height:' + size + 'px;background:' + conf.bg + ';font-size:' + Math.round(size * 0.55) + 'px;">' + conf.glyph + '</div>',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2]
     });

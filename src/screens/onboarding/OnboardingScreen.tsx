@@ -46,7 +46,7 @@ export function OnboardingScreen({ navigation }: Props) {
       <View style={styles.brandRow}>
         <LogoMark size={28} />
         <Text style={styles.brand}>
-          JOLT<Text style={{ color: colors.amber }}>.</Text>
+          AUTO<Text style={{ color: colors.amber }}>FIX</Text>
         </Text>
       </View>
 

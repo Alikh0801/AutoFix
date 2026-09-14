@@ -46,7 +46,7 @@ export function LoginScreen({ navigation }: Props) {
               <LogoMark size={44} />
             </View>
             <Text style={styles.wordmark}>
-              JOLT<Text style={{ color: colors.amber }}>.</Text>
+              AUTO<Text style={{ color: colors.amber }}>FIX</Text>
             </Text>
             <Text style={styles.tagline}>yolda qalma</Text>
 

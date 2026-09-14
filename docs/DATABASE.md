@@ -1,4 +1,4 @@
-# Jolt — Verilənlər bazası dizaynı (Faza 1)
+# AutoFix — Verilənlər bazası dizaynı (Faza 1)
 
 Bu sənəd Supabase (PostgreSQL + PostGIS) sxemini izah edir.
 SQL: [`supabase/migrations/`](../supabase/migrations), [`supabase/seed.sql`](../supabase/seed.sql).

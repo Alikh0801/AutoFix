@@ -1,4 +1,4 @@
-# Testing Jolt on real Android devices
+# Testing AutoFix on real Android devices
 
 Expo Go needs the Metro dev server running on a machine the phone can reach, so
 it can't be used for testing away from the laptop. The `preview` build profile

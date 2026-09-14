@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Jolt",
-    "slug": "jolt",
+    "name": "AutoFix",
+    "slug": "autofix",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,10 +9,10 @@
     "backgroundColor": "#0E1116",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "az.jolt.app"
+      "bundleIdentifier": "az.autofix.app"
     },
     "android": {
-      "package": "az.jolt.app",
+      "package": "az.autofix.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0E1116",
@@ -38,21 +38,21 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Jolt yaxınlıqdakı köməyi tapmaq və sifarişini düzgün yerə göndərmək üçün yerini istifadə edir."
+          "locationWhenInUsePermission": "AutoFix yaxınlıqdakı köməyi tapmaq və sifarişini düzgün yerə göndərmək üçün yerini istifadə edir."
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "526439f5-32a1-4ade-9edd-1de7f99341a4"
-      }
-    },
-    "owner": "kheirkheberli",
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "extra": {
+      "eas": {
+        "projectId": "7198f5bf-7d0a-4ec7-800b-fa804e902f3e"
+      }
+    },
+    "owner": "kheirkheberli",
     "updates": {
-      "url": "https://u.expo.dev/526439f5-32a1-4ade-9edd-1de7f99341a4"
+      "url": "https://u.expo.dev/7198f5bf-7d0a-4ec7-800b-fa804e902f3e"
     }
   }
 }

@@ -1,4 +1,4 @@
-# Jolt
+# AutoFix
 
 **Yolda qalma.** Yolda avtomobili xarab olan sürücünü ən yaxın seyyar usta ilə
 birləşdirən mobil xidmət — akkumulyator, təkər, yanacaq, açar qalması və
@@ -12,7 +12,7 @@ xəritə SDK-sı hələ qoşulmayıb.
 
 - [Expo](https://expo.dev) + React Native + TypeScript
 - React Navigation (native-stack + bottom-tabs)
-- `react-native-svg` — Jolt loqosu və xəritə mock-ları üçün
+- `react-native-svg` — AutoFix loqosu və xəritə mock-ları üçün
 - Space Grotesk / Inter / JetBrains Mono (Google Fonts)
 
 ## Quraşdırma
@@ -65,6 +65,6 @@ naviqasiya axınını nümayiş etdirir.
 
 ## Brend
 
-Loqo və rəng konsepti `assets/brand/` qovluğunda (`jolt-mark.svg`,
-`jolt-logo-concept.html`). Əsas rənglər: fon `#0E1116`, əsas vurğu (amber)
+Loqo və rəng konsepti `assets/brand/` qovluğunda (`autofix-mark.svg`,
+`autofix-logo-concept.html`). Əsas rənglər: fon `#0E1116`, əsas vurğu (amber)
 `#FFB627`, mətn `#F5F3EE`.
