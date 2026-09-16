@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/typography';
 import { DashboardScreen } from '../screens/provider/DashboardScreen';
@@ -17,6 +18,11 @@ const iconByRoute: Record<keyof ProviderTabParamList, keyof typeof Feather.glyph
 };
 
 export function ProviderTabs() {
+  // Android draws edge-to-edge, so the tab bar sits under the system
+  // navigation bar unless its own height accounts for that inset. A fixed
+  // height alone overrides React Navigation's automatic handling.
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -26,8 +32,8 @@ export function ProviderTabs() {
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.line,
-          height: 64,
-          paddingBottom: 10,
+          height: 64 + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
         },
         tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11 },
