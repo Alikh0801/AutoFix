@@ -60,7 +60,7 @@ export function LoginScreen({ navigation }: Props) {
               <TextInput
                 value={formatAzLocal(phoneDigits)}
                 onChangeText={(v) => setPhoneDigits(sanitizeAzLocal(v))}
-                placeholder="55-322-11-11"
+                placeholder="(55) - 123 - 45 - 67"
                 placeholderTextColor={colors.textFaint}
                 keyboardType="phone-pad"
                 style={styles.phoneInput}
