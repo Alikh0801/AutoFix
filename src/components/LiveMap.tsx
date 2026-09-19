@@ -1,8 +1,9 @@
-import React, { PropsWithChildren, useEffect, useRef } from 'react';
-import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 
 export type LiveMapMarkerVariant = 'you' | 'usta' | 'destination';
 
@@ -168,6 +169,10 @@ export function LiveMap({
 }: PropsWithChildren<LiveMapProps>) {
   const ref = useRef<WebView>(null);
   const readyRef = useRef(false);
+  // Leaflet and the tiles come from a CDN. With no connection the WebView just
+  // renders an empty light-grey box, which reads as "the map is loading"
+  // forever rather than "you are offline".
+  const [failed, setFailed] = useState(false);
 
   const send = () => {
     if (!readyRef.current) return;
@@ -194,16 +199,27 @@ export function LiveMap({
         domStorageEnabled
         scrollEnabled={false}
         mixedContentMode="always"
+        onError={() => setFailed(true)}
+        onHttpError={() => setFailed(true)}
+        onLoadStart={() => setFailed(false)}
         onLoadEnd={() => {
           readyRef.current = true;
           send();
         }}
       />
+      {failed && (
+        <View style={styles.errorOverlay} pointerEvents="none">
+          <Feather name="wifi-off" size={20} color={colors.textDim} />
+          <Text style={styles.errorText}>Xəritə yüklənmədi — internet bağlantını yoxla</Text>
+        </View>
+      )}
       {children}
       {interactive && (
         <Pressable
           style={[styles.recenterBtn, { bottom: 16 + bottomInset }]}
           onPress={() => ref.current?.postMessage(JSON.stringify({ type: 'recenter' }))}
+          accessibilityRole="button"
+          accessibilityLabel="Xəritəni mərkəzləşdir"
         >
           <Feather name="crosshair" size={18} color={colors.amber} />
         </Pressable>
@@ -216,6 +232,15 @@ const styles = StyleSheet.create({
   // Matches the map page's own background so there's no dark flash while tiles load.
   wrap: { overflow: 'hidden', backgroundColor: '#EDEBE6' },
   web: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    backgroundColor: colors.surface,
+  },
+  errorText: { fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.textDim, textAlign: 'center' },
   recenterBtn: {
     position: 'absolute',
     right: 16,

@@ -11,7 +11,15 @@ import { RatingStars } from '../../components/RatingStars';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCategories } from '../../context/CategoriesContext';
-import { fetchMyVehicles, fetchMyProviderSkills, vehicleLine, Vehicle } from '../../lib/api';
+import {
+  fetchMyVehicles,
+  fetchMyProviderSkills,
+  fetchMyProviderRating,
+  setProviderStatus,
+  vehicleLine,
+  Vehicle,
+  ProviderRating,
+} from '../../lib/api';
 import { isoToDisplay } from '../../lib/dob';
 import { ServiceCategoryId } from '../../data/mock';
 import { ProviderStackParamList } from '../../navigation/types';
@@ -35,9 +43,13 @@ export function ProviderProfileScreen() {
   const navigation = useNavigation<Nav>();
   const [defaultVehicle, setDefaultVehicle] = useState<Vehicle | null>(null);
   const [skills, setSkills] = useState<ServiceCategoryId[]>([]);
+  // The header used to render a hardcoded 5 stars + "Yeni" for everyone, so a
+  // provider's own profile disagreed with the rating the Qazanc tab (and every
+  // customer) saw.
+  const [rating, setRating] = useState<ProviderRating | null>(null);
 
   // Same account as the customer side, so show that same primary vehicle here;
-  // also refresh the selected service skills on focus.
+  // also refresh the selected service skills and rating on focus.
   useFocusEffect(
     useCallback(() => {
       fetchMyVehicles()
@@ -46,14 +58,22 @@ export function ProviderProfileScreen() {
       fetchMyProviderSkills()
         .then(setSkills)
         .catch(() => {});
+      fetchMyProviderRating()
+        .then(setRating)
+        .catch(() => {});
     }, [])
   );
 
-  const menuItems: { icon: keyof typeof Feather.glyphMap; label: string; onPress?: () => void }[] = [
+  const menuItems: {
+    icon: keyof typeof Feather.glyphMap;
+    label: string;
+    onPress?: () => void;
+    soon?: boolean;
+  }[] = [
     { icon: 'briefcase', label: 'Xidmət növlərim', onPress: () => navigation.navigate('ProviderServices') },
-    { icon: 'credit-card', label: 'Ödəniş məlumatları' },
-    { icon: 'file-text', label: 'Sənədlərim' },
-    { icon: 'help-circle', label: 'Dəstək' },
+    { icon: 'credit-card', label: 'Ödəniş məlumatları', soon: true },
+    { icon: 'file-text', label: 'Sənədlərim', soon: true },
+    { icon: 'help-circle', label: 'Dəstək', soon: true },
   ];
 
   return (
@@ -68,8 +88,12 @@ export function ProviderProfileScreen() {
           <View>
             <Text style={styles.name}>{profile?.fullName || 'Usta'}</Text>
             <View style={styles.ratingRow}>
-              <RatingStars value={5} size={13} />
-              <Text style={styles.ratingText}>Yeni</Text>
+              <RatingStars value={Math.round(rating?.ratingAvg ?? 0)} size={13} />
+              <Text style={styles.ratingText}>
+                {rating && rating.ratingCount > 0
+                  ? `${rating.ratingAvg.toFixed(1)} · ${rating.ratingCount} rəy`
+                  : 'Yeni'}
+              </Text>
             </View>
             <Text style={styles.ratingText}>
               {[profile?.phone, isoToDisplay(profile?.dateOfBirth)].filter(Boolean).join(' · ')}
@@ -106,7 +130,15 @@ export function ProviderProfileScreen() {
           </View>
         </Card>
 
-        <Pressable style={styles.switchCard} onPress={() => setRole('customer')}>
+        <Pressable
+          style={styles.switchCard}
+          onPress={() => {
+            // Leaving provider mode should stop advertising the usta as
+            // available; only the manual toggle used to do this.
+            setProviderStatus(false).catch(() => {});
+            setRole('customer');
+          }}
+        >
           <View style={styles.switchIcon}>
             <Feather name="navigation" size={18} color={colors.amber} />
           </View>
@@ -118,13 +150,26 @@ export function ProviderProfileScreen() {
         </Pressable>
 
         <View style={styles.menu}>
+          {/* Rows without a destination used to look identical to working
+              ones and simply swallowed the tap. Mark them instead. */}
           {menuItems.map((item) => (
-            <Pressable key={item.label} style={styles.menuRow} onPress={item.onPress}>
+            <Pressable
+              key={item.label}
+              style={[styles.menuRow, item.soon && styles.menuRowSoon]}
+              onPress={item.onPress}
+              disabled={!item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.soon ? `${item.label} — tezliklə` : item.label}
+            >
               <View style={styles.menuIcon}>
                 <Feather name={item.icon} size={16} color={colors.textDim} />
               </View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              <Feather name="chevron-right" size={16} color={colors.textFaint} />
+              {item.soon ? (
+                <Text style={styles.menuSoon}>tezliklə</Text>
+              ) : (
+                <Feather name="chevron-right" size={16} color={colors.textFaint} />
+              )}
             </Pressable>
           ))}
         </View>
@@ -228,6 +273,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuLabel: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.cream },
+  menuRowSoon: { opacity: 0.55 },
+  menuSoon: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint },
   logout: {
     flexDirection: 'row',
     alignItems: 'center',

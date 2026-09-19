@@ -20,6 +20,7 @@ import { Card } from '../../components/Card';
 import { RatingStars } from '../../components/RatingStars';
 import { useCategories } from '../../context/CategoriesContext';
 import { submitOffer, withdrawOffer } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'IncomingRequest'>;
@@ -33,7 +34,9 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
   const { request } = route.params;
   const { getCategory } = useCategories();
   const category = getCategory(request.categoryId);
-  const minPrice = category?.minPrice ?? 0;
+  // "Digər" carries no minimum price, which rendered as "minimum 0 AZN" and
+  // let a 0.5 AZN bid through. Every bid needs a real floor.
+  const minPrice = Math.max(category?.minPrice ?? 0, 1);
   const editing = request.myOfferPrice != null;
 
   const [price, setPrice] = useState(
@@ -64,7 +67,7 @@ export function IncomingRequestScreen({ route, navigation }: Props) {
         pickupLng: request.pickupLng,
       });
     } catch (e: any) {
-      setError(e?.message ?? 'Təklif göndərilmədi. Yenidən cəhd et.');
+      setError(errorMessage(e, 'Təklif göndərilmədi. Yenidən cəhd et.'));
       setSubmitting(false);
     }
   };

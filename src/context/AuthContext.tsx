@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { fetchMyProfile, Profile } from '../lib/api';
+import { fetchMyProfile, setProviderStatus, Profile } from '../lib/api';
 
 export interface SignUpInput {
   phone: string; // E.164, e.g. "+994553221111"
@@ -95,6 +95,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       signOut: async () => {
+        // Nothing else ever cleared is_online, so every signed-out provider
+        // stayed "online" in the database with their last known coordinates.
+        // Has to happen before signOut, while the session can still write.
+        try {
+          await setProviderStatus(false);
+        } catch {
+          // not a provider, or offline — signing out matters more
+        }
         await supabase.auth.signOut();
       },
     }),

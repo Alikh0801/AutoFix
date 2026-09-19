@@ -8,6 +8,7 @@ import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
 import { fetchProviderEarnings, payCommissionFromWallet, ProviderEarnings } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
@@ -63,7 +64,7 @@ export function EarningsScreen() {
             await load();
             Alert.alert('Ödənildi', `Komissiya borcu bağlandı. Balans: ${res.walletBalance} AZN`);
           } catch (e: any) {
-            Alert.alert('Ödəniş alınmadı', e?.message ?? 'Xəta baş verdi. Yenidən cəhd et.');
+            Alert.alert('Ödəniş alınmadı', errorMessage(e));
           } finally {
             setPaying(false);
           }

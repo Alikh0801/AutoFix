@@ -41,12 +41,17 @@ export function CustomerProfileScreen() {
     }, [])
   );
 
-  const menuItems: { icon: keyof typeof Feather.glyphMap; label: string; onPress?: () => void }[] = [
+  const menuItems: {
+    icon: keyof typeof Feather.glyphMap;
+    label: string;
+    onPress?: () => void;
+    soon?: boolean;
+  }[] = [
     { icon: 'truck', label: 'Avtomobillərim', onPress: () => navigation.navigate('Vehicles') },
-    { icon: 'credit-card', label: 'Ödəniş üsulları' },
-    { icon: 'bell', label: 'Bildirişlər' },
-    { icon: 'help-circle', label: 'Dəstək' },
-    { icon: 'file-text', label: 'Şərtlər və məxfilik' },
+    { icon: 'credit-card', label: 'Ödəniş üsulları', soon: true },
+    { icon: 'bell', label: 'Bildirişlər', soon: true },
+    { icon: 'help-circle', label: 'Dəstək', soon: true },
+    { icon: 'file-text', label: 'Şərtlər və məxfilik', soon: true },
   ];
 
   return (
@@ -91,13 +96,26 @@ export function CustomerProfileScreen() {
         </Pressable>
 
         <View style={styles.menu}>
+          {/* Rows without a destination used to look identical to working
+              ones and simply swallowed the tap. Mark them instead. */}
           {menuItems.map((item) => (
-            <Pressable key={item.label} style={styles.menuRow} onPress={item.onPress}>
+            <Pressable
+              key={item.label}
+              style={[styles.menuRow, item.soon && styles.menuRowSoon]}
+              onPress={item.onPress}
+              disabled={!item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.soon ? `${item.label} — tezliklə` : item.label}
+            >
               <View style={styles.menuIcon}>
                 <Feather name={item.icon} size={16} color={colors.textDim} />
               </View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              <Feather name="chevron-right" size={16} color={colors.textFaint} />
+              {item.soon ? (
+                <Text style={styles.menuSoon}>tezliklə</Text>
+              ) : (
+                <Feather name="chevron-right" size={16} color={colors.textFaint} />
+              )}
             </Pressable>
           ))}
         </View>
@@ -178,6 +196,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuLabel: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.cream },
+  menuRowSoon: { opacity: 0.55 },
+  menuSoon: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint },
   logout: {
     flexDirection: 'row',
     alignItems: 'center',

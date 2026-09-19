@@ -21,6 +21,7 @@ import {
   RequestStatus,
 } from '../../lib/api';
 import { getCurrentLocation } from '../../lib/location';
+import { errorMessage } from '../../lib/errors';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ActiveJob'>;
@@ -142,7 +143,7 @@ export function ActiveJobScreen({ navigation }: Props) {
             navigation.replace('ProviderTabs');
           } catch (e: any) {
             setCancelling(false);
-            Alert.alert('Xəta', e?.message ?? 'Ləğv edilmədi. Yenidən cəhd et.');
+            Alert.alert('Xəta', errorMessage(e, 'Ləğv edilmədi. Yenidən cəhd et.'));
           }
         },
       },
@@ -152,6 +153,20 @@ export function ActiveJobScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <LiveMap style={styles.map} markers={markers} bottomInset={expanded ? 360 : 120} />
+
+      {/* The job stays active in the background and the Panel keeps a banner
+          back into it — without this the provider could not reach Qazanc to
+          settle the commission debt that blocks them from new work. */}
+      <SafeAreaView style={styles.topBar} edges={['top']} pointerEvents="box-none">
+        <Pressable
+          style={styles.minimizeBtn}
+          onPress={() => navigation.navigate('ProviderTabs')}
+          accessibilityRole="button"
+          accessibilityLabel="Arxa fona keç"
+        >
+          <Feather name="chevron-down" size={20} color={colors.cream} />
+        </Pressable>
+      </SafeAreaView>
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
@@ -239,6 +254,18 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   emptyText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textDim, marginTop: 10 },
   map: { flex: 1 },
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  minimizeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheetInner: {
     backgroundColor: colors.bg,

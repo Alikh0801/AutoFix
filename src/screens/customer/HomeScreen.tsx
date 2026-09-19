@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { ServiceCategoryCard } from '../../components/ServiceCategoryCard';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
-import { fetchMyActiveRequest } from '../../lib/api';
+import { fetchMyActiveRequest, MyActiveRequest } from '../../lib/api';
 import { CustomerStackParamList, CustomerTabParamList } from '../../navigation/types';
 
 type Props = CompositeScreenProps<
@@ -22,24 +22,37 @@ type Props = CompositeScreenProps<
 export function HomeScreen({ navigation }: Props) {
   const { categories, loading } = useCategories();
   const { location, loading: locLoading, denied } = useLocation();
-  // Mirror the provider Dashboard's lock: if the customer already has a
-  // request in flight, jump straight back into it instead of leaving it
-  // invisible (and re-creatable) here.
   const [checkingActive, setCheckingActive] = useState(true);
+  const [activeRequest, setActiveRequest] = useState<MyActiveRequest | null>(null);
+  // Which request we have already funnelled the user into. Redirecting on
+  // EVERY focus meant that while a request was in flight, backing out of the
+  // tracking screen bounced straight back to it — leaving Sifarişlər, Profil
+  // and Avtomobillərim unreachable for as long as the job lasted. Redirect
+  // once, then leave a banner so returning to it is still one tap away.
+  const autoRedirectedRef = useRef<string | null>(null);
+
+  const openActive = useCallback(
+    (r: MyActiveRequest) => {
+      if (r.status === 'searching') {
+        navigation.navigate('Searching', { requestId: r.id, category: r.categoryId });
+      } else {
+        navigation.navigate('Tracking', { requestId: r.id });
+      }
+    },
+    [navigation]
+  );
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setCheckingActive(true);
       fetchMyActiveRequest()
         .then((r) => {
           if (!active) return;
-          if (r && r.status === 'searching') {
-            navigation.navigate('Searching', { requestId: r.id, category: r.categoryId });
-          } else if (r) {
-            navigation.navigate('Tracking', { requestId: r.id });
-          } else {
-            setCheckingActive(false);
+          setActiveRequest(r);
+          setCheckingActive(false);
+          if (r && autoRedirectedRef.current !== r.id) {
+            autoRedirectedRef.current = r.id;
+            openActive(r);
           }
         })
         .catch(() => {
@@ -48,7 +61,7 @@ export function HomeScreen({ navigation }: Props) {
       return () => {
         active = false;
       };
-    }, [navigation])
+    }, [openActive])
   );
 
   const locationText = denied
@@ -81,7 +94,12 @@ export function HomeScreen({ navigation }: Props) {
               {locationText}
             </Text>
           </View>
-          <Pressable style={styles.avatarChip}>
+          <Pressable
+            style={styles.avatarChip}
+            onPress={() => navigation.navigate('Profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Profil"
+          >
             <Feather name="user" size={16} color={colors.cream} />
           </Pressable>
         </View>
@@ -91,8 +109,35 @@ export function HomeScreen({ navigation }: Props) {
 
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
+
+        {activeRequest ? (
+          <Pressable
+            style={styles.activeBanner}
+            onPress={() => openActive(activeRequest)}
+            accessibilityRole="button"
+            accessibilityLabel="Aktiv sifarişinə qayıt"
+          >
+            <View style={styles.activeIcon}>
+              <Feather name="navigation" size={18} color={colors.amber} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.activeTitle}>Aktiv sifarişin var</Text>
+              <Text style={styles.activeSub} numberOfLines={1}>
+                {activeRequest.status === 'searching'
+                  ? 'Təkliflər gözlənilir — davam et'
+                  : 'İzləmə ekranına qayıt'}
+              </Text>
+            </View>
+            <Feather name="arrow-right" size={18} color={colors.amber} />
+          </Pressable>
+        ) : null}
+
         <Text style={styles.sheetTitle}>Nə probleminiz var?</Text>
-        <Text style={styles.sheetSubtitle}>Problemi seç, ən yaxın usta 60 saniyə ərzində tapılsın</Text>
+        <Text style={styles.sheetSubtitle}>
+          {activeRequest
+            ? 'Yeni sifariş üçün əvvəlcə hazırkını bitir və ya ləğv et'
+            : 'Problemi seç, yaxınlıqdakı ustalar təklif göndərsin'}
+        </Text>
 
         {loading && categories.length === 0 ? (
           <View style={styles.categoryLoading}>
@@ -108,7 +153,14 @@ export function HomeScreen({ navigation }: Props) {
               <ServiceCategoryCard
                 key={cat.id}
                 category={cat}
-                onPress={() => navigation.navigate('RequestDetails', { category: cat.id })}
+                // With a request already in flight the backend refuses a second
+                // one, so send the user back to it rather than into a form that
+                // can only fail at the last step.
+                onPress={() =>
+                  activeRequest
+                    ? openActive(activeRequest)
+                    : navigation.navigate('RequestDetails', { category: cat.id })
+                }
               />
             ))}
           </ScrollView>
@@ -119,7 +171,7 @@ export function HomeScreen({ navigation }: Props) {
             <Feather name="clock" size={16} color={colors.amber} />
           </View>
           <Text style={styles.bannerText}>
-            Orta gözləmə vaxtı hazırda <Text style={{ color: colors.amber }}>6 dəqiqə</Text>
+            Sorğun <Text style={{ color: colors.amber }}>8 km</Text> radiusundakı ustalara göndərilir
           </Text>
         </View>
       </View>
@@ -171,6 +223,27 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 16,
   },
+  activeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  activeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTitle: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
+  activeSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
   sheetTitle: { ...type.h2, marginBottom: 4 },
   sheetSubtitle: { ...type.bodyDim, fontSize: 13, marginBottom: 16 },
   categoryRow: { gap: 12, paddingRight: 8, paddingBottom: 4 },

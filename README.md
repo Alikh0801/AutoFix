@@ -4,15 +4,23 @@
 birləşdirən mobil xidmət — akkumulyator, təkər, yanacaq, açar qalması və
 oxşar kiçik nasazlıqlar üçün Uber/Bolt tərzli tələb-təklif modeli.
 
-Bu repo hazırda **UI/UX prototipidir**: bütün ekranlar və naviqasiya axını
-mock (saxta) data üzərində qurulub, real backend, autentifikasiya və ya
-xəritə SDK-sı hələ qoşulmayıb.
+Tətbiq **canlı Supabase backend-i** üzərində işləyir: telefon nömrəsi ilə
+qeydiyyat, PostGIS əsaslı yaxınlıq axtarışı, real vaxt təklif mübadiləsi və
+iki tərəfli reytinq artıq qurulub. Hələ **saxta (placeholder)** qalan iki
+şey var:
+
+- **Nömrə təsdiqi** — SMS göndərilmir; parol nömrənin özündən törədilir
+  (`src/context/AuthContext.tsx`). OTP provayderi qoşulana qədər belə qalır.
+- **Ödəniş** — kart ödənişi real şəkildə tutulmur, komissiya saxta pul
+  kisəsi balansından bağlanır (migrasiya `0011`).
 
 ## Texnologiya
 
-- [Expo](https://expo.dev) + React Native + TypeScript
+- [Expo](https://expo.dev) SDK 54 + React Native + TypeScript
 - React Navigation (native-stack + bottom-tabs)
-- `react-native-svg` — AutoFix loqosu və xəritə mock-ları üçün
+- [Supabase](https://supabase.com) — Postgres + PostGIS, RLS, Realtime, Auth
+- Leaflet + OpenStreetMap (WebView içində) — açar tələb etməyən canlı xəritə
+- `react-native-svg` — AutoFix loqosu üçün
 - Space Grotesk / Inter / JetBrains Mono (Google Fonts)
 
 ## Quraşdırma
@@ -29,39 +37,49 @@ npm run android
 ```
 src/
   theme/        rəng palitrası və tipoqrafiya
-  components/   yenidən istifadə olunan UI hissələri (Button, Card, MapMock, ...)
-  data/mock.ts  xidmət kateqoriyaları, mock ustalar, sifarişlər
-  context/      AppContext — rol seçimi və aktiv sifariş axınının simulyasiyası
+  components/   yenidən istifadə olunan UI hissələri (Button, Card, LiveMap, ...)
+  data/mock.ts  paylaşılan domen tipləri (kateqoriya siyahısı bazadan gəlir)
+  lib/          supabase klienti, api qatı, telefon/plaka/tarix validasiyası
+  context/      Auth, Location, Categories + AppContext (rejim və aktiv/passiv)
   navigation/   RootNavigator + müştəri/usta stack və tab naviqasiyaları
   screens/
     onboarding/ giriş slaydları
-    auth/       rol seçimi, telefon/OTP (mock)
+    auth/       telefon ilə giriş və qeydiyyat
     customer/   xəritə, sifariş yaratma, axtarış, izləmə, reytinq, tarixçə, profil
-    provider/   panel (yaxınlıqdakı sorğular), sorğu qəbulu, aktiv iş, qazanc, profil
+    provider/   panel (yaxınlıqdakı sorğular), təklif vermə, aktiv iş, qazanc, profil
+supabase/
+  migrations/   sxem, RLS siyasətləri və biznes qaydası funksiyaları
 ```
+
+Baza sxemi və qaydalar: [`docs/DATABASE.md`](docs/DATABASE.md).
+Real cihazda test: [`TESTING.md`](TESTING.md).
 
 ## Əsas axın
 
-**Müştəri:** rol seç → telefon/OTP → xəritə üzərində problem seç → ünvanı
-təsdiqlə → "axtarılır" ekranı → usta tapılır → canlı status (qəbul edildi →
-yoldadır → çatdı → təmirdə → tamamlandı) → reytinq ver.
+Rol əvvəlcədən seçilmir — hər hesab həm müştəri, həm ustadır və tətbiq
+daxilində rejimlər arasında keçid edir (Profil → rejim kartı).
 
-**Usta:** rol seç → telefon/OTP → aktiv/passiv rejim → yaxınlıqdakı sorğular
-lenti → sorğunu qəbul et (sayğaclı) → müştəriyə doğru get → təmirə başla →
-tamamla → qazancı gör.
+**Müştəri:** telefon nömrəsi ilə qeydiyyat → xəritədə problem seç → ünvanı
+təsdiqlə → "axtarılır" ekranı → gələn təkliflərdən birini qəbul et → canlı
+status (qəbul edildi → yoldadır → çatdı → təmirdə → tamamlandı) → reytinq ver.
 
-## Növbəti addımlar (backend inteqrasiyası üçün)
+**Usta:** Profil → Xidmət növlərim-dən bacarıqları seç → aktiv rejimə keç →
+yaxınlıqdakı sorğular lenti → qiymət təklif et → müştəri seçsə iş başlayır →
+müştəriyə doğru get → təmirə başla → tamamla → qazancı gör.
 
-Prototip fazasından sonra real məhsula keçid üçün tövsiyə olunan yığın:
+Sorğu **8 km** radiusda və son **15 dəqiqə** ərzində yaradılmış olduqda
+ustalara görünür; cavabsız qalan sorğu avtomatik olaraq `expired` statusuna
+keçir.
 
-- **Backend:** Node.js + TypeScript + PostgreSQL (Prisma) + Socket.io (real-time
-  sifariş/lokasiya yayımı üçün)
-- **Auth:** telefon nömrəsi ilə OTP (SMS provayderi ilə)
-- **Xəritə:** Google Maps SDK (`react-native-maps` + Directions/Places API)
-- **Ödəniş:** yerli kart provayderi inteqrasiyası
+## Növbəti addımlar
 
-Bu addımlar hələ tətbiq olunmayıb — hazırkı kod bazası yalnız interfeys və
-naviqasiya axınını nümayiş etdirir.
+- **Nömrə təsdiqi:** SMS provayderi + `signInWithOtp` / `verifyOtp`
+  (`testModePassword` ilə birlikdə silinir)
+- **Ödəniş:** yerli kart provayderi inteqrasiyası; komissiya real tutulsun
+- **Push bildiriş:** hazırda usta sorğunu yalnız tətbiq açıq olanda görür —
+  15 dəqiqəlik pəncərə ilə birlikdə bu ən böyük məhdudiyyətdir
+- **Marşrut:** xəritədə sadəcə nişanlar var, yol xətti yoxdur
+  (Directions API və ya OSRM)
 
 ## Brend
 

@@ -21,6 +21,7 @@ import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
 import { createRequest } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'RequestDetails'>;
@@ -71,7 +72,7 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
       });
       navigation.replace('Searching', { requestId, category: category.id });
     } catch (e: any) {
-      setError(e?.message ?? 'Sifariş yaradılmadı. Yenidən cəhd et.');
+      setError(errorMessage(e, 'Sifariş yaradılmadı. Yenidən cəhd et.'));
       setSubmitting(false);
     }
   };
@@ -80,7 +81,12 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Geri"
+        >
             <Feather name="arrow-left" size={20} color={colors.cream} />
           </Pressable>
           <Text style={styles.headerTitle}>Sifariş detalları</Text>

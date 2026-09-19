@@ -175,11 +175,12 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
   return data as string;
 }
 
+/** Cancel a request that is still searching, closing any offers on it.
+ *  Goes through an RPC because the client holds no direct UPDATE on requests
+ *  any more — a row-level policy could not stop it rewriting agreed_price or
+ *  jumping straight to 'completed' (see migration 0026). */
 export async function cancelRequest(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('requests')
-    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-    .eq('id', id);
+  const { error } = await supabase.rpc('cancel_request', { p_request_id: id });
   if (error) throw error;
 }
 
@@ -255,6 +256,7 @@ export interface RequestDetail {
   pickupLng: number | null;
   providerId: string | null;
   providerName: string | null;
+  providerPhone: string | null;
   providerRating: number;
   providerRatingCount: number;
   providerLat: number | null;
@@ -276,6 +278,7 @@ export async function fetchRequestDetail(requestId: string): Promise<RequestDeta
     pickupLng: r.pickup_lng != null ? Number(r.pickup_lng) : null,
     providerId: r.provider_id,
     providerName: r.provider_name,
+    providerPhone: r.provider_phone ?? null,
     providerRating: r.provider_rating != null ? Number(r.provider_rating) : 0,
     providerRatingCount: r.provider_rating_cnt ?? 0,
     providerLat: r.provider_lat != null ? Number(r.provider_lat) : null,
@@ -375,6 +378,47 @@ export async function fetchMyOrders(): Promise<OrderHistoryItem[]> {
     paymentMethod: r.payment_method as 'cash' | 'card',
     createdAt: r.created_at,
   }));
+}
+
+export interface ProviderRating {
+  ratingAvg: number;
+  ratingCount: number;
+  jobsDone: number;
+}
+
+/** The signed-in provider's own public rating, for their profile header. */
+export async function fetchMyProviderRating(): Promise<ProviderRating> {
+  const uid = await requireUid();
+  const { data, error } = await supabase
+    .from('provider_profiles')
+    .select('rating_avg, rating_count, jobs_done')
+    .eq('id', uid)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    ratingAvg: data?.rating_avg != null ? Number(data.rating_avg) : 0,
+    ratingCount: data?.rating_count ?? 0,
+    jobsDone: data?.jobs_done ?? 0,
+  };
+}
+
+export interface ProviderState {
+  isBlocked: boolean;
+  commissionOwed: number;
+}
+
+/** Whether the signed-in provider is currently blocked over unpaid commission.
+ *  A blocked provider's feed simply returns nothing, so the dashboard needs
+ *  this to explain the empty list instead of claiming there is no work. */
+export async function fetchMyProviderState(): Promise<ProviderState | null> {
+  const { data, error } = await supabase.rpc('my_provider_state');
+  if (error) throw error;
+  const r = (data ?? [])[0];
+  if (!r) return null; // not a provider yet
+  return {
+    isBlocked: !!r.is_blocked,
+    commissionOwed: Number(r.commission_balance ?? 0),
+  };
 }
 
 /** TEST MODE: clear the provider's commission debt from their wallet balance. */

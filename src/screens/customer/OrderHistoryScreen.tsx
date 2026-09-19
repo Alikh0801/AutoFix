@@ -1,13 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
 import { fetchMyOrders, OrderHistoryItem, RequestStatus } from '../../lib/api';
+import { CustomerStackParamList, CustomerTabParamList } from '../../navigation/types';
 
 const statusInfo: Record<RequestStatus, { label: string; color: string }> = {
   searching: { label: 'Axtarılır', color: colors.amber },
@@ -20,6 +23,9 @@ const statusInfo: Record<RequestStatus, { label: string; color: string }> = {
   expired: { label: 'Vaxtı bitdi', color: colors.textDim },
 };
 
+/** Statuses the customer can still be taken back into. */
+const LIVE_STATUSES: RequestStatus[] = ['searching', 'accepted', 'en_route', 'arrived', 'in_progress'];
+
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
 function formatOrderDate(iso: string): string {
@@ -29,10 +35,16 @@ function formatOrderDate(iso: string): string {
   return `${d.getDate()} ${AZ_MONTHS[d.getMonth()]}, ${hh}:${mm}`;
 }
 
-export function OrderHistoryScreen() {
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<CustomerTabParamList, 'History'>,
+  NativeStackScreenProps<CustomerStackParamList>
+>;
+
+export function OrderHistoryScreen({ navigation }: Props) {
   const { getCategory } = useCategories();
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -43,6 +55,12 @@ export function OrderHistoryScreen() {
       setLoading(false);
     }
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,11 +81,30 @@ export function OrderHistoryScreen() {
           data={orders}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.amber} />
+          }
           renderItem={({ item }) => {
             const category = getCategory(item.categoryId);
             const status = statusInfo[item.status];
+            // An in-flight order used to be inert here: the only way back into
+            // it was the Home screen's redirect.
+            const live = LIVE_STATUSES.includes(item.status);
             return (
-              <Card style={styles.card}>
+              <Card
+                style={styles.card}
+                onPress={
+                  live
+                    ? () =>
+                        item.status === 'searching'
+                          ? navigation.navigate('Searching', {
+                              requestId: item.id,
+                              category: item.categoryId,
+                            })
+                          : navigation.navigate('Tracking', { requestId: item.id })
+                    : undefined
+                }
+              >
                 <View style={styles.row}>
                   <View style={styles.iconWrap}>
                     <Feather name={(category?.icon as any) ?? 'tool'} size={18} color={colors.amber} />

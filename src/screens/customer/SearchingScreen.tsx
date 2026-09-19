@@ -12,7 +12,15 @@ import { RatingStars } from '../../components/RatingStars';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
 import { supabase } from '../../lib/supabase';
-import { fetchRequestOffers, cancelRequest, acceptOffer, RequestOffer } from '../../lib/api';
+import {
+  fetchRequestOffers,
+  fetchRequestDetail,
+  cancelRequest,
+  acceptOffer,
+  RequestOffer,
+  RequestStatus,
+} from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Searching'>;
@@ -30,15 +38,26 @@ export function SearchingScreen({ route, navigation }: Props) {
   const [offers, setOffers] = useState<RequestOffer[]>([]);
   const [cancelling, setCancelling] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [status, setStatus] = useState<RequestStatus>('searching');
+  const finished = status === 'expired' || status === 'cancelled';
+
+  // Accepting an offer and the status poll can both decide to leave for the
+  // tracking screen; whichever gets there first wins.
+  const leftRef = useRef(false);
+  const goToTracking = () => {
+    if (leftRef.current) return;
+    leftRef.current = true;
+    navigation.replace('Tracking', { requestId });
+  };
 
   const onAccept = async (offerId: string) => {
     setAccepting(offerId);
     try {
       await acceptOffer(offerId);
-      navigation.replace('Tracking', { requestId });
+      goToTracking();
     } catch (e: any) {
       setAccepting(null);
-      Alert.alert('Xəta', e?.message ?? 'Təklif qəbul edilmədi.');
+      Alert.alert('Xəta', errorMessage(e, 'Təklif qəbul edilmədi.'));
     }
   };
 
@@ -47,6 +66,19 @@ export function SearchingScreen({ route, navigation }: Props) {
     const refetch = () => {
       fetchRequestOffers(requestId)
         .then((o) => active && setOffers(o.filter((x) => x.status === 'pending')))
+        .catch(() => {});
+      // Watch the request itself too. It leaves every provider's feed after 15
+      // minutes and is then expired server-side, and it can be accepted or
+      // cancelled from elsewhere — none of which shows up in the offer list,
+      // so without this the screen spun forever on a dead request.
+      fetchRequestDetail(requestId)
+        .then((d) => {
+          if (!active || !d) return;
+          setStatus(d.status);
+          if (d.status !== 'searching' && d.status !== 'expired' && d.status !== 'cancelled') {
+            goToTracking();
+          }
+        })
         .catch(() => {});
     };
     refetch();
@@ -99,42 +131,69 @@ export function SearchingScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <LiveMap style={styles.map} markers={markers} bottomInset={260} />
 
+      {/* Leaving does not cancel the search — Home keeps a banner back into it. */}
+      <SafeAreaView style={styles.topBar} edges={['top']} pointerEvents="box-none">
+        <Pressable
+          style={styles.minimizeBtn}
+          onPress={() => navigation.popToTop()}
+          accessibilityRole="button"
+          accessibilityLabel="Arxa fona keç"
+        >
+          <Feather name="chevron-down" size={20} color={colors.cream} />
+        </Pressable>
+      </SafeAreaView>
+
       <SafeAreaView style={styles.footer} edges={['bottom']}>
         <View style={styles.card}>
-          <Text style={styles.title}>
-            {offers.length > 0 ? `${offers.length} təklif gəldi` : 'Ustalar axtarılır…'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {category?.title ?? 'Sorğu'} · sorğun yaxınlıqdakı ustalara göndərildi
-          </Text>
-
-          {offers.length === 0 ? (
-            <View style={styles.dotsRow}>
-              {[0, 1, 2].map((i) => (
-                <LoadingDot key={i} delay={i * 180} />
-              ))}
-            </View>
+          {finished ? (
+            <>
+              <Feather name="clock" size={26} color={colors.textFaint} />
+              <Text style={[styles.title, { marginTop: 12 }]}>
+                {status === 'cancelled' ? 'Sorğu ləğv edildi' : 'Təklif gəlmədi'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {status === 'cancelled'
+                  ? 'Bu sorğu artıq aktiv deyil.'
+                  : 'Yaxınlıqdakı ustalardan cavab olmadı. Yenidən cəhd edə bilərsən.'}
+              </Text>
+              <Button label="Ana səhifəyə qayıt" onPress={() => navigation.popToTop()} />
+            </>
           ) : (
-            <View style={styles.offerList}>
-              {offers.map((o) => (
-                <Card key={o.id} style={styles.offerCard}>
-                  <View style={styles.offerTop}>
-                    <View style={styles.offerAvatar}>
-                      <Text style={styles.offerAvatarText}>{initials(o.providerName)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.offerText}>{o.providerName ?? 'Usta'}</Text>
-                      <View style={styles.offerMetaRow}>
-                        <RatingStars value={Math.round(o.providerRating)} size={11} />
-                        <Text style={styles.offerMetaText}>
-                          {o.providerRatingCount > 0 ? o.providerRating.toFixed(1) : 'Yeni'}
-                        </Text>
-                        {o.vehicleLabel ? (
-                          <>
-                            <Text style={styles.offerMetaDot}>·</Text>
-                            <Text style={styles.offerMetaText} numberOfLines={1}>
-                              {o.vehicleLabel}
+            <>
+              <Text style={styles.title}>
+                {offers.length > 0 ? `${offers.length} təklif gəldi` : 'Ustalar axtarılır…'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {category?.title ?? 'Sorğu'} · sorğun yaxınlıqdakı ustalara göndərildi
+              </Text>
+
+              {offers.length === 0 ? (
+                <View style={styles.dotsRow}>
+                  {[0, 1, 2].map((i) => (
+                    <LoadingDot key={i} delay={i * 180} />
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.offerList}>
+                  {offers.map((o) => (
+                    <Card key={o.id} style={styles.offerCard}>
+                      <View style={styles.offerTop}>
+                        <View style={styles.offerAvatar}>
+                          <Text style={styles.offerAvatarText}>{initials(o.providerName)}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.offerText}>{o.providerName ?? 'Usta'}</Text>
+                          <View style={styles.offerMetaRow}>
+                            <RatingStars value={Math.round(o.providerRating)} size={11} />
+                            <Text style={styles.offerMetaText}>
+                              {o.providerRatingCount > 0 ? o.providerRating.toFixed(1) : 'Yeni'}
                             </Text>
+                            {o.vehicleLabel ? (
+                              <>
+                                <Text style={styles.offerMetaDot}>·</Text>
+                                <Text style={styles.offerMetaText} numberOfLines={1}>
+                                  {o.vehicleLabel}
+                                </Text>
                           </>
                         ) : null}
                       </View>
@@ -166,10 +225,18 @@ export function SearchingScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          <Pressable style={styles.cancelBtn} onPress={onCancel} disabled={cancelling}>
+          <Pressable
+            style={styles.cancelBtn}
+            onPress={onCancel}
+            disabled={cancelling}
+            accessibilityRole="button"
+            accessibilityLabel="Sifarişi ləğv et"
+          >
             <Feather name="x" size={14} color={colors.textDim} />
             <Text style={styles.cancelText}>Ləğv et</Text>
           </Pressable>
+            </>
+          )}
         </View>
       </SafeAreaView>
     </View>
@@ -196,6 +263,18 @@ function LoadingDot({ delay }: { delay: number }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   map: { flex: 1 },
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  minimizeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   card: {
     margin: 16,

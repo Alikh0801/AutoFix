@@ -1,13 +1,6 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { ServiceCategoryId, Usta, mockUstas } from '../data/mock';
 
 export type Role = 'customer' | 'provider';
-
-interface ActiveRequest {
-  category: ServiceCategoryId;
-  note: string;
-  usta: Usta;
-}
 
 interface AppContextValue {
   // Which mode the user is currently acting in. Every account can be both a
@@ -17,9 +10,6 @@ interface AppContextValue {
   toggleRole: () => void;
   isOnline: boolean;
   setIsOnline: (v: boolean) => void;
-  activeRequest: ActiveRequest | null;
-  startRequest: (category: ServiceCategoryId, note: string) => void;
-  clearRequest: () => void;
   resetApp: () => void;
 }
 
@@ -27,8 +17,10 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>('customer');
-  const [isOnline, setIsOnline] = useState(true);
-  const [activeRequest, setActiveRequest] = useState<ActiveRequest | null>(null);
+  // Providers opt in explicitly. Defaulting to true put every user who so much
+  // as opened provider mode online — broadcasting their GPS position — without
+  // them ever touching the switch.
+  const [isOnline, setIsOnline] = useState(false);
 
   const value = useMemo<AppContextValue>(
     () => ({
@@ -37,18 +29,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toggleRole: () => setRole((r) => (r === 'customer' ? 'provider' : 'customer')),
       isOnline,
       setIsOnline,
-      activeRequest,
-      startRequest: (category, note) => {
-        const usta = mockUstas[Math.floor(Math.random() * mockUstas.length)];
-        setActiveRequest({ category, note, usta });
-      },
-      clearRequest: () => setActiveRequest(null),
       resetApp: () => {
         setRole('customer');
-        setActiveRequest(null);
+        setIsOnline(false);
       },
     }),
-    [role, isOnline, activeRequest]
+    [role, isOnline]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

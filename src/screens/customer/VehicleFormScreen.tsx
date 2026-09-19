@@ -16,6 +16,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Button } from '../../components/Button';
+import { errorMessage } from '../../lib/errors';
 import { CustomerStackParamList } from '../../navigation/types';
 import { addVehicle, updateVehicle } from '../../lib/api';
 import { formatAzPlate, sanitizeAzPlate, validateAzPlate } from '../../lib/plate';
@@ -50,7 +51,7 @@ export function VehicleFormScreen({ route, navigation }: Props) {
       else await addVehicle(input);
       navigation.goBack();
     } catch (e: any) {
-      setError(e?.message ?? 'Yadda saxlanmadı. Yenidən cəhd et.');
+      setError(errorMessage(e, 'Yadda saxlanmadı. Yenidən cəhd et.'));
       setSaving(false);
     }
   };
@@ -59,7 +60,12 @@ export function VehicleFormScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Geri"
+        >
             <Feather name="arrow-left" size={20} color={colors.cream} />
           </Pressable>
           <Text style={styles.headerTitle}>{editing ? 'Avtomobili redaktə et' : 'Yeni avtomobil'}</Text>

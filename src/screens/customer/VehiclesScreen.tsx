@@ -10,6 +10,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { CustomerStackParamList } from '../../navigation/types';
 import { fetchMyVehicles, deleteVehicle, Vehicle } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Vehicles'>;
 
@@ -48,7 +49,13 @@ export function VehiclesScreen({ navigation }: Props) {
         text: 'Sil',
         style: 'destructive',
         onPress: async () => {
-          await deleteVehicle(v.id);
+          // An unhandled rejection here (a car still referenced elsewhere, a
+          // dropped connection) used to fail silently — the row simply stayed.
+          try {
+            await deleteVehicle(v.id);
+          } catch (e) {
+            Alert.alert('Silinmədi', errorMessage(e, 'Avtomobil silinmədi. Yenidən cəhd et.'));
+          }
           load();
         },
       },
@@ -58,7 +65,12 @@ export function VehiclesScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Geri"
+        >
           <Feather name="arrow-left" size={20} color={colors.cream} />
         </Pressable>
         <Text style={styles.headerTitle}>Avtomobillərim</Text>
@@ -86,7 +98,13 @@ export function VehiclesScreen({ navigation }: Props) {
                 </View>
                 <Text style={styles.details}>{vehicleDetails(item) || 'Detallar yoxdur'}</Text>
               </Pressable>
-              <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.deleteBtn}>
+              <Pressable
+                onPress={() => confirmDelete(item)}
+                hitSlop={8}
+                style={styles.deleteBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`${vehicleLabel(item)} avtomobilini sil`}
+              >
                 <Feather name="trash-2" size={16} color={colors.textDim} />
               </Pressable>
             </Card>

@@ -71,7 +71,12 @@ export function ProviderServicesScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Geri"
+        >
           <Feather name="arrow-left" size={20} color={colors.cream} />
         </Pressable>
         <Text style={styles.headerTitle}>Xidmət növlərim</Text>

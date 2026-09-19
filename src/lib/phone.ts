@@ -12,9 +12,27 @@ export const AZ_OPERATOR_CODES = ['10', '50', '51', '55', '60', '70', '77', '99'
 
 const LOCAL_DIGITS = 9; // digits after +994
 
-/** Keep only digits and cap at the 9 local digits. */
+/**
+ * Keep only digits and cap at the 9 local digits, normalising the two ways a
+ * number routinely arrives from outside the keypad:
+ *
+ *   "+994 55 123 45 67" / "994551234567"  ->  "551234567"   (country code)
+ *   "055 123 45 67"                       ->  "551234567"   (trunk prefix)
+ *
+ * Blindly slicing the first 9 digits instead turned a pasted "+994551234567"
+ * into "994551234" — which passes validation, because "99" is a real operator
+ * code, and signs the user in as a different number entirely.
+ *
+ * The country code is only stripped when there are MORE digits than a local
+ * number holds: "994551234" on its own is a valid Bakcell number, not a
+ * prefix. A leading zero is always safe to drop — no operator code starts
+ * with one — so it also works while the number is still being typed.
+ */
 export function sanitizeAzLocal(input: string): string {
-  return input.replace(/\D/g, '').slice(0, LOCAL_DIGITS);
+  let d = input.replace(/\D/g, '');
+  if (d.length > LOCAL_DIGITS && d.startsWith('994')) d = d.slice(3);
+  d = d.replace(/^0+/, '');
+  return d.slice(0, LOCAL_DIGITS);
 }
 
 /** Group local digits for display: "551234567" -> "(55) - 123 - 45 - 67"
@@ -36,9 +54,11 @@ export interface AzPhoneResult {
   error?: string;
 }
 
-/** Validate the 9 local digits and return the E.164 number. */
+/** Validate the 9 local digits and return the E.164 number. Normalises its
+ *  input the same way the field does, so a number handed straight to this
+ *  function (pasted, or restored from storage) is read identically. */
 export function validateAzPhone(localDigits: string): AzPhoneResult {
-  const d = localDigits.replace(/\D/g, '');
+  const d = sanitizeAzLocal(localDigits);
   if (d.length === 0) return { valid: false, error: 'Telefon nömrəsi tələb olunur.' };
   if (d.length < LOCAL_DIGITS)
     return { valid: false, error: 'Nömrə yarımçıqdır (məs. +994 (55) - 123 - 45 - 67).' };

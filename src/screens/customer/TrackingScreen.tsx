@@ -13,6 +13,7 @@ import { useCategories } from '../../context/CategoriesContext';
 import { cancelActiveJob, fetchRequestDetail, RequestDetail } from '../../lib/api';
 import { distanceKm, etaMinutes } from '../../lib/location';
 import { RequestStatus } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
 import { CustomerStackParamList } from '../../navigation/types';
 
 const CANCELLABLE: RequestStatus[] = ['accepted', 'en_route', 'arrived'];
@@ -95,7 +96,7 @@ export function TrackingScreen({ route, navigation }: Props) {
             navigation.popToTop();
           } catch (e: any) {
             setCancelling(false);
-            Alert.alert('Xəta', e?.message ?? 'Ləğv edilmədi. Yenidən cəhd et.');
+            Alert.alert('Xəta', errorMessage(e, 'Ləğv edilmədi. Yenidən cəhd et.'));
           }
         },
       },
@@ -114,6 +115,20 @@ export function TrackingScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <LiveMap style={styles.map} markers={markers} />
 
+      {/* The job keeps running in the background; Home shows a banner back
+          into it. Without this the customer could not reach any other tab
+          until the job finished. */}
+      <SafeAreaView style={styles.topBar} edges={['top']} pointerEvents="box-none">
+        <Pressable
+          style={styles.minimizeBtn}
+          onPress={() => navigation.popToTop()}
+          accessibilityRole="button"
+          accessibilityLabel="Arxa fona keç"
+        >
+          <Feather name="chevron-down" size={20} color={colors.cream} />
+        </Pressable>
+      </SafeAreaView>
+
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.sheetInner}>
           <View style={styles.sheetHandle} />
@@ -125,7 +140,12 @@ export function TrackingScreen({ route, navigation }: Props) {
             </Text>
           )}
 
-          <StatusStepper current={detail.status === 'searching' ? 'accepted' : (detail.status as any)} />
+          {/* A cancelled or expired request is not a point on the happy path;
+              the stepper greyed every step out and read as "nothing has
+              happened yet" rather than "this is over". */}
+          {detail.status !== 'cancelled' && detail.status !== 'expired' && (
+            <StatusStepper current={detail.status === 'searching' ? 'accepted' : (detail.status as any)} />
+          )}
 
           <Card style={styles.ustaCard}>
             <View style={styles.ustaRow}>
@@ -143,7 +163,13 @@ export function TrackingScreen({ route, navigation }: Props) {
                   <Text style={styles.metaText}>{category?.title ?? 'Xidmət'}</Text>
                 </View>
               </View>
-              <Pressable style={styles.callBtn} onPress={() => Linking.openURL('tel:')}>
+              <Pressable
+                onPress={() => detail.providerPhone && Linking.openURL(`tel:${detail.providerPhone}`)}
+                style={[styles.callBtn, !detail.providerPhone && styles.callBtnDisabled]}
+                disabled={!detail.providerPhone}
+                accessibilityRole="button"
+                accessibilityLabel={`${detail.providerName ?? 'Usta'} ilə əlaqə saxla`}
+              >
                 <Feather name="phone" size={16} color={colors.bg} />
               </Pressable>
             </View>
@@ -182,6 +208,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  minimizeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheetInner: {
     backgroundColor: colors.bg,
@@ -220,6 +258,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  callBtnDisabled: { backgroundColor: colors.amberDim, opacity: 0.5 },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: 14 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },

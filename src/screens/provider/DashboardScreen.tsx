@@ -1,5 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Switch, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
@@ -16,7 +25,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
 import { supabase } from '../../lib/supabase';
-import { fetchProviderFeed, setProviderStatus, fetchMyActiveJob, ProviderFeedItem } from '../../lib/api';
+import {
+  fetchProviderFeed,
+  setProviderStatus,
+  fetchMyActiveJob,
+  fetchMyProviderState,
+  ProviderFeedItem,
+  ProviderState,
+} from '../../lib/api';
 
 function firstName(name: string | null | undefined): string {
   return name?.trim().split(/\s+/)[0] || 'Usta';
@@ -45,9 +61,10 @@ export function DashboardScreen({ navigation }: Props) {
   const { getCategory } = useCategories();
   const [feed, setFeed] = useState<ProviderFeedItem[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
-  // Gate the feed behind an active-job check so a provider with an ongoing
-  // job never sees the browsing list — they get funnelled straight into it.
   const [checkingActive, setCheckingActive] = useState(true);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<ProviderState | null>(null);
+  const autoRedirectedRef = useRef<string | null>(null);
 
   // Mirror online status + location to the DB.
   useEffect(() => {
@@ -70,8 +87,17 @@ export function DashboardScreen({ navigation }: Props) {
     (onNone: () => void) => {
       fetchMyActiveJob()
         .then((job) => {
+          setActiveJobId(job?.id ?? null);
           if (job) {
-            navigation.navigate('ActiveJob', { requestId: job.id });
+            // Funnel into the job the first time we see it, but not on every
+            // focus: re-navigating each time made Qazanc and Profil — and so
+            // the commission debt that blocks them — unreachable for the whole
+            // duration of a job.
+            if (autoRedirectedRef.current !== job.id) {
+              autoRedirectedRef.current = job.id;
+              navigation.navigate('ActiveJob', { requestId: job.id });
+            }
+            onNone();
           } else {
             onNone();
           }
@@ -82,19 +108,19 @@ export function DashboardScreen({ navigation }: Props) {
   );
 
   // On every focus (mount, tab switch back, returning after completing a job),
-  // check for an active job FIRST. If there is one, jump straight into it and
-  // never reveal the browsing feed; only load the feed once we know there
-  // isn't one.
+  // check for an active job first, then load the browsing feed.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setCheckingActive(true);
       checkActive(() => {
         if (active) {
           setCheckingActive(false);
           loadFeed();
         }
       });
+      fetchMyProviderState()
+        .then((s) => active && setBlocked(s?.isBlocked ? s : null))
+        .catch(() => {});
       return () => {
         active = false;
       };
@@ -189,6 +215,47 @@ export function DashboardScreen({ navigation }: Props) {
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
 
+        {activeJobId ? (
+          <Pressable
+            style={styles.activeBanner}
+            onPress={() => navigation.navigate('ActiveJob', { requestId: activeJobId })}
+            accessibilityRole="button"
+            accessibilityLabel="Aktiv işinə qayıt"
+          >
+            <View style={styles.activeIcon}>
+              <Feather name="tool" size={18} color={colors.amber} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.activeTitle}>Aktiv işin var</Text>
+              <Text style={styles.activeSub}>İşi davam etdirmək üçün toxun</Text>
+            </View>
+            <Feather name="arrow-right" size={18} color={colors.amber} />
+          </Pressable>
+        ) : null}
+
+        {/* A blocked provider's feed just comes back empty, which read as
+            "no work nearby" rather than "you owe commission". Say it outright,
+            where they actually are. */}
+        {blocked ? (
+          <Pressable
+            style={styles.blockedBanner}
+            onPress={() => navigation.navigate('Earnings')}
+            accessibilityRole="button"
+            accessibilityLabel="Komissiya borcunu ödə"
+          >
+            <View style={styles.blockedIcon}>
+              <Feather name="alert-circle" size={16} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.blockedTitle}>Hesabın bloklanıb</Text>
+              <Text style={styles.blockedSub}>
+                {blocked.commissionOwed} AZN komissiya borcu bağlanana qədər sifariş görünmür
+              </Text>
+            </View>
+            <Text style={styles.blockedAction}>Ödə</Text>
+          </Pressable>
+        ) : null}
+
         {checkingActive ? (
           <View style={styles.offlineBox}>
             <ActivityIndicator color={colors.amber} />
@@ -214,6 +281,9 @@ export function DashboardScreen({ navigation }: Props) {
             data={feed}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ gap: 12, paddingBottom: 8, flexGrow: 1 }}
+            refreshControl={
+              <RefreshControl refreshing={loadingFeed} onRefresh={loadFeed} tintColor={colors.amber} />
+            }
             renderItem={({ item }) => {
               const category = getCategory(item.categoryId);
               return (
@@ -313,6 +383,49 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 14 },
+  activeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  activeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTitle: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
+  activeSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 2 },
+  blockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  blockedIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockedTitle: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.cream },
+  blockedSub: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim, marginTop: 2 },
+  blockedAction: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.danger },
   sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   sheetTitle: { ...type.h3 },
   sheetCount: {
