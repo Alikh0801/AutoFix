@@ -55,7 +55,7 @@ type Props = CompositeScreenProps<
 >;
 
 export function DashboardScreen({ navigation }: Props) {
-  const { isOnline, setIsOnline } = useApp();
+  const { isOnline, setIsOnline, prefsLoaded } = useApp();
   const { profile, session } = useAuth();
   const { location } = useLocation();
   const { getCategory } = useCategories();
@@ -66,10 +66,14 @@ export function DashboardScreen({ navigation }: Props) {
   const [blocked, setBlocked] = useState<ProviderState | null>(null);
   const autoRedirectedRef = useRef<string | null>(null);
 
-  // Mirror online status + location to the DB.
+  // Mirror online status + location to the DB — but only once the stored mode
+  // has been read back. Writing on mount regardless meant every app restart
+  // published the default (offline) before the real value loaded, which took
+  // the provider out of notify_new_request until they touched the switch.
   useEffect(() => {
+    if (!prefsLoaded) return;
     setProviderStatus(isOnline, location?.lat, location?.lng).catch(() => {});
-  }, [isOnline, location?.lat, location?.lng]);
+  }, [prefsLoaded, isOnline, location?.lat, location?.lng]);
 
   const loadFeed = useCallback(() => {
     if (!isOnline || !location) {
