@@ -119,14 +119,32 @@ export function TrackingScreen({ route, navigation }: Props) {
           into it. Without this the customer could not reach any other tab
           until the job finished. */}
       <SafeAreaView style={styles.topBar} edges={['top']} pointerEvents="box-none">
-        <Pressable
-          style={styles.minimizeBtn}
-          onPress={() => navigation.popToTop()}
-          accessibilityRole="button"
-          accessibilityLabel="Arxa fona keç"
-        >
-          <Feather name="chevron-down" size={20} color={colors.cream} />
-        </Pressable>
+        <View style={styles.topBarRow}>
+          <Pressable
+            style={styles.minimizeBtn}
+            onPress={() => navigation.popToTop()}
+            accessibilityRole="button"
+            accessibilityLabel="Arxa fona keç"
+          >
+            <Feather name="chevron-down" size={20} color={colors.cream} />
+          </Pressable>
+
+          {/* Up here rather than under the sheet: cancelling is destructive and
+              irreversible, and at the bottom edge it sat in the strip Android
+              hands to the system navigation bar. */}
+          {canCancel && (
+            <Pressable
+              style={styles.cancelChip}
+              onPress={onCancel}
+              disabled={cancelling}
+              accessibilityRole="button"
+              accessibilityLabel="Sifarişi ləğv et"
+            >
+              <Feather name="x" size={14} color={colors.danger} />
+              <Text style={styles.cancelChipText}>Ləğv et</Text>
+            </Pressable>
+          )}
+        </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
@@ -192,11 +210,6 @@ export function TrackingScreen({ route, navigation }: Props) {
             />
           ) : detail.status === 'cancelled' ? (
             <Button label="Ana səhifəyə qayıt" variant="secondary" onPress={() => navigation.popToTop()} />
-          ) : canCancel ? (
-            <Pressable style={styles.cancelLink} onPress={onCancel} disabled={cancelling}>
-              <Feather name="x" size={14} color={colors.textDim} />
-              <Text style={styles.cancelLinkText}>Ləğv et</Text>
-            </Pressable>
           ) : null}
         </View>
       </SafeAreaView>
@@ -209,6 +222,20 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   map: { flex: 1 },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  topBarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cancelChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginTop: 8,
+  },
+  cancelChipText: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.danger },
   minimizeBtn: {
     width: 40,
     height: 40,
@@ -220,7 +247,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
   },
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  // The SafeAreaView pads itself by the bottom inset; without a background of
+  // its own that padding was transparent, so the map showed through as a strip
+  // under the sheet. The rounded corners live on sheetInner, so filling this
+  // one just continues the sheet down to the screen edge.
+  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg },
   sheetInner: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: 28,
@@ -263,6 +294,4 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
   priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
-  cancelLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
-  cancelLinkText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
 });

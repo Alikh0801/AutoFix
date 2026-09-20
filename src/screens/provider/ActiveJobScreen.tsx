@@ -158,14 +158,32 @@ export function ActiveJobScreen({ navigation }: Props) {
           back into it — without this the provider could not reach Qazanc to
           settle the commission debt that blocks them from new work. */}
       <SafeAreaView style={styles.topBar} edges={['top']} pointerEvents="box-none">
-        <Pressable
-          style={styles.minimizeBtn}
-          onPress={() => navigation.navigate('ProviderTabs')}
-          accessibilityRole="button"
-          accessibilityLabel="Arxa fona keç"
-        >
-          <Feather name="chevron-down" size={20} color={colors.cream} />
-        </Pressable>
+        <View style={styles.topBarRow}>
+          <Pressable
+            style={styles.minimizeBtn}
+            onPress={() => navigation.navigate('ProviderTabs')}
+            accessibilityRole="button"
+            accessibilityLabel="Arxa fona keç"
+          >
+            <Feather name="chevron-down" size={20} color={colors.cream} />
+          </Pressable>
+
+          {/* Away from the bottom edge: walking away from a job is
+              irreversible, and down there it shared the strip Android gives
+              the system navigation bar. */}
+          {step && (
+            <Pressable
+              style={styles.cancelChip}
+              onPress={onCancel}
+              disabled={cancelling}
+              accessibilityRole="button"
+              accessibilityLabel="İşdən imtina et"
+            >
+              <Feather name="x" size={14} color={colors.danger} />
+              <Text style={styles.cancelChipText}>İmtina et</Text>
+            </Pressable>
+          )}
+        </View>
       </SafeAreaView>
 
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
@@ -236,13 +254,6 @@ export function ActiveJobScreen({ navigation }: Props) {
           ) : (
             <Button label="İşi tamamladım" onPress={onComplete} loading={busy} />
           )}
-
-          {step ? (
-            <Pressable style={styles.cancelLink} onPress={onCancel} disabled={cancelling}>
-              <Feather name="x" size={14} color={colors.textDim} />
-              <Text style={styles.cancelLinkText}>İşdən imtina et</Text>
-            </Pressable>
-          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -255,6 +266,20 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textDim, marginTop: 10 },
   map: { flex: 1 },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  topBarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cancelChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginTop: 8,
+  },
+  cancelChipText: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.danger },
   minimizeBtn: {
     width: 40,
     height: 40,
@@ -266,7 +291,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
   },
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  // The SafeAreaView pads itself by the bottom inset; without a background of
+  // its own that padding was transparent, so the map showed through as a strip
+  // under the sheet. The rounded corners live on sheetInner.
+  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg },
   sheetInner: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: 28,
@@ -311,6 +339,4 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   priceLabel: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
   priceValue: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
-  cancelLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 4 },
-  cancelLinkText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
 });
