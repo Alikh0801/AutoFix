@@ -13,7 +13,8 @@
     },
     "android": {
       "package": "az.autofix.app",
-      "versionCode": 1,
+      "versionCode": 2,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0E1116",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -45,6 +46,14 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "AutoFix yaxınlıqdakı köməyi tapmaq və sifarişini düzgün yerə göndərmək üçün yerini istifadə edir."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#FFB627",
+          "defaultChannel": "requests"
         }
       ]
     ],

@@ -12,6 +12,7 @@ import { ProviderRoot } from './ProviderRoot';
 import { RootStackParamList } from './types';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -40,6 +41,9 @@ function AuthStack() {
 export function RootNavigator() {
   const { initializing, session } = useAuth();
   const { role } = useApp();
+  // Lives here because it needs both the session and the role switch, and
+  // this is the first component inside all of the providers.
+  usePushNotifications();
 
   if (initializing) {
     return (

@@ -43,3 +43,8 @@ yarn-error.*
 
 # Supabase CLI local state
 supabase/.temp/
+
+# Firebase service account key for FCM push (NEVER commit — bypasses auth)
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json

@@ -32,6 +32,38 @@ inside every build. It is only safe because row-level security is enabled on
 every table. The `service_role` key must never be set as an `EXPO_PUBLIC_`
 variable — it bypasses RLS entirely.
 
+## Push notifications (one-time, before the next build)
+
+Push is the only thing in the app that cannot ship over the air —
+`expo-notifications` is a native module, so it needs a fresh APK, and Android
+needs Firebase credentials behind it.
+
+1. **Firebase**: create a project at [console.firebase.google.com](https://console.firebase.google.com),
+   add an Android app with package name `az.autofix.app`, download
+   **`google-services.json`** and put it at the repo root. It only holds public
+   identifiers, so it is safe to commit.
+2. **Service account key**: Firebase → Project settings → Service accounts →
+   *Generate new private key*. This one is a secret and is gitignored.
+3. **Upload it to EAS**:
+   ```sh
+   eas credentials
+   # Android → preview → Google Service Account
+   #   → Manage your Google Service Account Key for Push Notifications (FCM V1)
+   #   → Set up a new key → Upload a new service account key
+   ```
+4. **Enable `pg_net`** in Supabase: Dashboard → Database → Extensions → search
+   `pg_net` → enable. Migration `0027` refuses to run without it, because the
+   notifications are sent straight from Postgres triggers.
+5. Run migration `0027_push_notifications.sql`, then build a new APK.
+
+Notifications are sent by the database, not the app: a new request wakes every
+online, unblocked, in-range provider whose skills match; a new offer wakes the
+customer; job status changes and cancellations wake the other party. Nothing
+is sent to whoever caused the change.
+
+Expo Go cannot receive remote notifications on Android (SDK 53+) — the preview
+APK is the only way to test this.
+
 ## Build the APK
 
 ```sh
@@ -70,6 +102,10 @@ Register two separate phone numbers; a provider cannot bid on their own request.
   radius in `fetchProviderFeed` is raised for the test.
 - A customer may only hold one active request at a time; finish or cancel the
   previous one first.
+- **Push:** lock the provider's phone, create a request from the other one, and
+  the provider should get "Yeni sorğu". If nothing arrives, check Supabase
+  → Logs → Postgres for a `send_push failed` warning; a silent absence usually
+  means no token was registered (permission denied, or an Expo Go build).
 
 ## Known test-mode behaviour
 

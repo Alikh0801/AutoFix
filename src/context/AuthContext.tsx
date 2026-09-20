@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { fetchMyProfile, setProviderStatus, Profile } from '../lib/api';
+import { unregisterPushNotifications } from '../lib/push';
 
 export interface SignUpInput {
   phone: string; // E.164, e.g. "+994553221111"
@@ -103,6 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // not a provider, or offline — signing out matters more
         }
+        // Drop the push token too, so a shared phone stops receiving the
+        // previous account's jobs. Also has to run before the session dies.
+        await unregisterPushNotifications();
         await supabase.auth.signOut();
       },
     }),
