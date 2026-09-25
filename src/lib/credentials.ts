@@ -48,9 +48,15 @@ export function validatePasswordMatch(password: string, repeat: string): FieldRe
   return { valid: true, value: repeat };
 }
 
-/** Digits only, exactly the length of an emailed confirmation code. */
+/**
+ * How many digits the emailed confirmation code has. Must match Supabase's
+ * "Email OTP Length" setting (Authentication → Providers → Email) — the code
+ * screen submits as soon as it has this many digits, so a mismatch either
+ * fires early with a truncated code or never fires at all.
+ */
+export const OTP_LENGTH = 8;
+
+/** Digits only, capped at the length of a confirmation code. */
 export function sanitizeOtp(input: string): string {
   return input.replace(/\D/g, '').slice(0, OTP_LENGTH);
 }
-
-export const OTP_LENGTH = 6;

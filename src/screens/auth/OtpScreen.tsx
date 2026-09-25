@@ -202,11 +202,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   email: { fontFamily: fonts.bodySemi, color: colors.cream },
-  boxRow: { flexDirection: 'row', gap: 8, alignSelf: 'stretch', justifyContent: 'center' },
+  boxRow: { flexDirection: 'row', gap: 6, alignSelf: 'stretch', justifyContent: 'center' },
+  // Width comes from the row rather than a fixed number: at six digits the
+  // boxes cap out and centre, at eight they shrink to fit a narrow phone
+  // instead of overflowing it.
   box: {
-    width: 46,
-    height: 58,
-    borderRadius: 14,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 46,
+    height: 56,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
@@ -215,7 +220,7 @@ const styles = StyleSheet.create({
   },
   boxActive: { borderColor: colors.amber },
   boxFilled: { borderColor: colors.amberDim },
-  boxText: { fontFamily: fonts.monoSemi, fontSize: 22, color: colors.cream },
+  boxText: { fontFamily: fonts.monoSemi, fontSize: 20, color: colors.cream },
   // Off-screen rather than display:none — a hidden input stops receiving
   // keystrokes on Android.
   hiddenInput: { position: 'absolute', opacity: 0, height: 1, width: 1 },
