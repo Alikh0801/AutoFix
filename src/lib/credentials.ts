@@ -54,7 +54,7 @@ export function validatePasswordMatch(password: string, repeat: string): FieldRe
  * screen submits as soon as it has this many digits, so a mismatch either
  * fires early with a truncated code or never fires at all.
  */
-export const OTP_LENGTH = 8;
+export const OTP_LENGTH = 6;
 
 /** Digits only, capped at the length of a confirmation code. */
 export function sanitizeOtp(input: string): string {
