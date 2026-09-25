@@ -48,6 +48,17 @@ export function formatAzLocal(localDigits: string): string {
   return rest.length ? `${head} - ${rest.join(' - ')}` : head;
 }
 
+/** Stored E.164 back to the form the app writes everywhere else:
+ *  "+994553221121" -> "+994 (55) - 322 - 11 - 21". Anything that is not a
+ *  nine-digit Azerbaijani number is returned untouched rather than mangled. */
+export function formatAzE164(e164: string | null | undefined): string {
+  if (!e164) return '';
+  const digits = e164.replace(/\D/g, '');
+  const local = digits.length > LOCAL_DIGITS && digits.startsWith('994') ? digits.slice(3) : digits;
+  if (local.length !== LOCAL_DIGITS) return e164;
+  return `${AZ_DIAL_CODE} ${formatAzLocal(local)}`;
+}
+
 export interface AzPhoneResult {
   valid: boolean;
   e164?: string; // "+994553221111"

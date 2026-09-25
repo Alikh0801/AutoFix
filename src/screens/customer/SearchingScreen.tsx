@@ -21,6 +21,7 @@ import {
   RequestStatus,
 } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { formatAzE164 } from '../../lib/phone';
 import { CustomerStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Searching'>;
@@ -177,50 +178,71 @@ export function SearchingScreen({ route, navigation }: Props) {
                 <View style={styles.offerList}>
                   {offers.map((o) => (
                     <Card key={o.id} style={styles.offerCard}>
+                      {/* The price decides the whole card, so it gets its own
+                          column. Sharing a line with the vehicle is what let
+                          it land on top of the plate once both were long. */}
                       <View style={styles.offerTop}>
                         <View style={styles.offerAvatar}>
                           <Text style={styles.offerAvatarText}>{initials(o.providerName)}</Text>
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.offerText}>{o.providerName ?? 'Usta'}</Text>
-                          <View style={styles.offerMetaRow}>
+
+                        <View style={styles.offerIdentity}>
+                          <Text style={styles.offerName} numberOfLines={1}>
+                            {o.providerName ?? 'Usta'}
+                          </Text>
+                          <View style={styles.offerRatingRow}>
                             <RatingStars value={Math.round(o.providerRating)} size={11} />
-                            <Text style={styles.offerMetaText}>
-                              {o.providerRatingCount > 0 ? o.providerRating.toFixed(1) : 'Yeni'}
+                            <Text style={styles.offerMetaText} numberOfLines={1}>
+                              {o.providerRatingCount > 0
+                                ? `${o.providerRating.toFixed(1)} · ${o.providerRatingCount} rəy`
+                                : 'Yeni usta'}
                             </Text>
-                            {o.vehicleLabel ? (
-                              <>
-                                <Text style={styles.offerMetaDot}>·</Text>
-                                <Text style={styles.offerMetaText} numberOfLines={1}>
-                                  {o.vehicleLabel}
-                                </Text>
-                          </>
-                        ) : null}
+                          </View>
+                        </View>
+
+                        <View style={styles.offerPriceWrap}>
+                          <Text style={styles.offerPrice}>{o.price}</Text>
+                          <Text style={styles.offerPriceUnit}>AZN</Text>
+                        </View>
                       </View>
-                    </View>
-                    <Text style={styles.offerPrice}>{o.price} AZN</Text>
-                  </View>
 
-                  {o.providerPhone ? (
-                    <Pressable
-                      style={styles.offerPhoneRow}
-                      onPress={() => Linking.openURL(`tel:${o.providerPhone}`)}
-                    >
-                      <Feather name="phone" size={12} color={colors.textDim} />
-                      <Text style={styles.offerPhoneText}>{o.providerPhone}</Text>
-                    </Pressable>
-                  ) : null}
+                      {(o.vehicleLabel || o.providerPhone) && (
+                        <View style={styles.offerDetails}>
+                          {o.vehicleLabel ? (
+                            <View style={styles.offerDetailRow}>
+                              <Feather name="truck" size={13} color={colors.textFaint} />
+                              <Text style={styles.offerDetailText} numberOfLines={1}>
+                                {o.vehicleLabel}
+                              </Text>
+                            </View>
+                          ) : null}
 
-                  {o.note ? <Text style={styles.offerNote}>{o.note}</Text> : null}
+                          {o.providerPhone ? (
+                            <Pressable
+                              style={styles.offerDetailRow}
+                              onPress={() => Linking.openURL(`tel:${o.providerPhone}`)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${o.providerName ?? 'Usta'} ilə əlaqə saxla`}
+                            >
+                              <Feather name="phone" size={13} color={colors.amber} />
+                              <Text style={styles.offerPhoneText} numberOfLines={1}>
+                                {formatAzE164(o.providerPhone)}
+                              </Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      )}
 
-                  <Button
-                    label="Qəbul et"
-                    onPress={() => onAccept(o.id)}
-                    loading={accepting === o.id}
-                    disabled={accepting != null && accepting !== o.id}
-                    style={{ marginTop: 12, height: 44 }}
-                  />
-                </Card>
+                      {o.note ? <Text style={styles.offerNote}>{o.note}</Text> : null}
+
+                      <Button
+                        label="Qəbul et"
+                        onPress={() => onAccept(o.id)}
+                        loading={accepting === o.id}
+                        disabled={accepting != null && accepting !== o.id}
+                        style={styles.offerAccept}
+                      />
+                    </Card>
               ))}
             </View>
           )}
@@ -290,8 +312,25 @@ const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.amber },
   offerList: { alignSelf: 'stretch', gap: 8, marginBottom: 14 },
-  offerCard: { gap: 0 },
+  offerCard: { gap: 0, padding: 14 },
   offerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // minWidth 0 is what actually lets the name and rating truncate: without it
+  // a flex child in a row refuses to shrink below its content and pushes into
+  // whatever sits beside it.
+  offerIdentity: { flex: 1, minWidth: 0 },
+  offerName: { fontFamily: fonts.bodySemi, fontSize: 14.5, color: colors.cream },
+  offerRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  offerPriceWrap: { flexShrink: 0, alignItems: 'flex-end', paddingLeft: 8 },
+  offerDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    gap: 8,
+  },
+  offerDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  offerDetailText: { flex: 1, minWidth: 0, fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.textDim },
+  offerAccept: { marginTop: 14, height: 46 },
   offerAvatar: {
     width: 34,
     height: 34,
@@ -301,14 +340,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   offerAvatarText: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.bg },
-  offerText: { fontFamily: fonts.bodyMedium, fontSize: 13.5, color: colors.cream },
-  offerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  offerMetaText: { fontFamily: fonts.body, fontSize: 11, color: colors.textDim },
-  offerMetaDot: { color: colors.textFaint, fontSize: 11 },
-  offerPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  offerPhoneText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textDim },
+  offerMetaText: { flexShrink: 1, minWidth: 0, fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim },
+  offerPhoneText: { flex: 1, minWidth: 0, fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.amber },
   offerNote: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, marginTop: 8, lineHeight: 18 },
-  offerPrice: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber },
+  offerPrice: { fontFamily: fonts.monoSemi, fontSize: 21, lineHeight: 24, color: colors.amber },
+  offerPriceUnit: { fontFamily: fonts.bodySemi, fontSize: 10.5, letterSpacing: 1, color: colors.amberDim, marginTop: -1 },
   offerHint: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint, textAlign: 'center', marginTop: 2 },
   cancelBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 },
   cancelText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textDim },
