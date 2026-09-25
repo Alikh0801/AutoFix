@@ -92,7 +92,8 @@ are run, for every installed build at once.
 
 ## Two-phone test checklist
 
-Register two separate phone numbers; a provider cannot bid on their own request.
+Register two accounts with different email addresses and different phone
+numbers; a provider cannot bid on their own request.
 
 - The provider must pick matching categories under **Profil → Xidmət növlərim**
   ("Digər" is exempt and reaches every provider).
@@ -107,8 +108,26 @@ Register two separate phone numbers; a provider cannot bid on their own request.
   → Logs → Postgres for a `send_push failed` warning; a silent absence usually
   means no token was registered (permission denied, or an Expo Go build).
 
+## Email delivery (required before anyone can register)
+
+Registration is email + password, confirmed with a 6-digit code. Two things
+must be set up in Supabase or nobody can sign up at all:
+
+1. **Custom SMTP.** Supabase's built-in email service sends **2 messages per
+   hour** and is explicitly not for production — you will hit that limit with
+   one tester. Authentication → Emails → SMTP Settings. Resend's free tier
+   (100/day) is more than enough for testing.
+2. **The code, not a link.** Authentication → Emails → *Confirm signup*
+   template must render `{{ .Token }}`. Out of the box it renders
+   `{{ .ConfirmationURL }}`, which sends a link the app cannot consume — the
+   user would get an email with nothing to type in.
+
+Shorten the email OTP expiry from the default while you are in there;
+Authentication → Providers → Email has the setting.
+
 ## Known test-mode behaviour
 
-Phone sign-in accepts any number and sends no SMS, and commission is settled
-against a fake wallet balance. Both are deliberate placeholders — see the
-comments in `src/context/AuthContext.tsx` and migration `0011`.
+Commission is settled against a fake wallet balance rather than a real
+payment — a deliberate placeholder, see migration `0011`. Registration and
+sign-in are real: a password the user chooses, and an address they have to
+confirm.

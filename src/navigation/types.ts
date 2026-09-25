@@ -5,6 +5,8 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
+  /** Email confirmation code. `from` only changes the wording. */
+  Otp: { email: string; from: 'register' | 'login' };
 };
 
 export type CustomerStackParamList = {

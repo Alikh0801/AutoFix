@@ -9,30 +9,46 @@ import { Button } from '../../components/Button';
 import { LogoMark } from '../../components/Logo';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
-import { AZ_DIAL_CODE, formatAzLocal, sanitizeAzLocal, validateAzPhone } from '../../lib/phone';
+import { errorMessage } from '../../lib/errors';
+import { normalizeEmail, validateEmail } from '../../lib/credentials';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
   const { signIn } = useAuth();
-  const [phoneDigits, setPhoneDigits] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     Keyboard.dismiss();
     setError(null);
-    const phone = validateAzPhone(phoneDigits);
-    if (!phone.valid) {
-      setError(phone.error!);
+
+    const mail = validateEmail(email);
+    if (!mail.valid) {
+      setError(mail.error!);
       return;
     }
+    if (!password) {
+      setError('Şifrəni yaz.');
+      return;
+    }
+
     setLoading(true);
     try {
       // On success the session updates and RootNavigator swaps to the app.
-      await signIn(phone.e164!);
+      await signIn(mail.value!, password);
     } catch (e: any) {
-      setError(mapAuthError(e?.message));
+      // An account that never confirmed its address can finish here rather
+      // than being told to start over.
+      if (/email not confirmed/i.test(e?.message ?? '')) {
+        navigation.navigate('Otp', { email: mail.value!, from: 'login' });
+        setLoading(false);
+        return;
+      }
+      setError(errorMessage(e, 'Daxil olmaq alınmadı. Yenidən cəhd et.'));
       setLoading(false);
     }
   };
@@ -51,20 +67,48 @@ export function LoginScreen({ navigation }: Props) {
             <Text style={styles.tagline}>yolda qalma</Text>
 
             <Text style={styles.title}>Xoş gəldin</Text>
-            <Text style={styles.subtitle}>Davam etmək üçün telefon nömrənlə daxil ol</Text>
+            <Text style={styles.subtitle}>Davam etmək üçün hesabına daxil ol</Text>
 
-            <View style={styles.phoneRow}>
-              <Feather name="phone" size={16} color={colors.textDim} />
-              <Text style={styles.prefix}>{AZ_DIAL_CODE}</Text>
-              <View style={styles.divider} />
+            <View style={styles.field}>
+              <Feather name="mail" size={16} color={colors.textDim} />
               <TextInput
-                value={formatAzLocal(phoneDigits)}
-                onChangeText={(v) => setPhoneDigits(sanitizeAzLocal(v))}
-                placeholder="(55) - 123 - 45 - 67"
+                value={email}
+                onChangeText={setEmail}
+                onBlur={() => setEmail(normalizeEmail(email))}
+                placeholder="ad@nümunə.com"
                 placeholderTextColor={colors.textFaint}
-                keyboardType="phone-pad"
-                style={styles.phoneInput}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                style={styles.input}
               />
+            </View>
+
+            <View style={[styles.field, { marginTop: 12 }]}>
+              <Feather name="lock" size={16} color={colors.textDim} />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Şifrə"
+                placeholderTextColor={colors.textFaint}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                textContentType="password"
+                style={styles.input}
+                onSubmitEditing={handleLogin}
+              />
+              <Pressable
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Şifrəni gizlət' : 'Şifrəni göstər'}
+              >
+                <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color={colors.textDim} />
+              </Pressable>
             </View>
 
             {error && <Text style={styles.error}>{error}</Text>}
@@ -73,7 +117,7 @@ export function LoginScreen({ navigation }: Props) {
               label="Daxil ol"
               onPress={handleLogin}
               loading={loading}
-              disabled={phoneDigits.length < 9}
+              disabled={!email || !password}
               style={{ marginTop: 22 }}
             />
           </View>
@@ -87,16 +131,6 @@ export function LoginScreen({ navigation }: Props) {
       </Pressable>
     </KeyboardAvoidingView>
   );
-}
-
-export function mapAuthError(message?: string): string {
-  const m = (message || '').toLowerCase();
-  if (m.includes('invalid login')) return 'Bu nömrə ilə hesab tapılmadı. Əvvəlcə qeydiyyatdan keç.';
-  if (m.includes('already registered') || m.includes('already been registered'))
-    return 'Bu nömrə artıq qeydiyyatdadır.';
-  if (m.includes('unable to validate') || m.includes('invalid phone')) return 'Telefon nömrəsi düzgün deyil.';
-  if (m.includes('network')) return 'Şəbəkə xətası. İnternet bağlantını yoxla.';
-  return message || 'Xəta baş verdi. Yenidən cəhd et.';
 }
 
 const styles = StyleSheet.create({
@@ -126,7 +160,7 @@ const styles = StyleSheet.create({
   },
   title: { ...type.h2, textAlign: 'center', marginBottom: 6 },
   subtitle: { ...type.bodyDim, fontSize: 14, textAlign: 'center', marginBottom: 32, paddingHorizontal: 12 },
-  phoneRow: {
+  field: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
@@ -138,14 +172,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     gap: 10,
   },
-  prefix: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.cream },
-  divider: { width: 1, height: 22, backgroundColor: colors.line },
-  phoneInput: {
+  input: {
     flex: 1,
-    fontFamily: fonts.bodySemi,
-    fontSize: 16,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15.5,
     color: colors.cream,
-    letterSpacing: 0.5,
   },
   error: {
     fontFamily: fonts.bodyMedium,

@@ -6,11 +6,14 @@ oxşar kiçik nasazlıqlar üçün Uber/Bolt tərzli tələb-təklif modeli.
 
 Tətbiq **canlı Supabase backend-i** üzərində işləyir: telefon nömrəsi ilə
 qeydiyyat, PostGIS əsaslı yaxınlıq axtarışı, real vaxt təklif mübadiləsi və
-iki tərəfli reytinq artıq qurulub. Hələ **saxta (placeholder)** qalan iki
-şey var:
+iki tərəfli reytinq artıq qurulub.
 
-- **Nömrə təsdiqi** — SMS göndərilmir; parol nömrənin özündən törədilir
-  (`src/context/AuthContext.tsx`). OTP provayderi qoşulana qədər belə qalır.
+Qeydiyyat **e-poçt + şifrə** ilədir; ünvan 6 rəqəmli kodla təsdiqlənir.
+Telefon nömrəsi hələ də alınır, çünki müştəri ilə usta bir-birinə onunla
+zəng edir — sadəcə artıq giriş açarı deyil.
+
+Hələ **saxta (placeholder)** qalan bir şey var:
+
 - **Ödəniş** — kart ödənişi real şəkildə tutulmur, komissiya saxta pul
   kisəsi balansından bağlanır (migrasiya `0011`).
 
@@ -59,7 +62,7 @@ Real cihazda test: [`TESTING.md`](TESTING.md).
 Rol əvvəlcədən seçilmir — hər hesab həm müştəri, həm ustadır və tətbiq
 daxilində rejimlər arasında keçid edir (Profil → rejim kartı).
 
-**Müştəri:** telefon nömrəsi ilə qeydiyyat → xəritədə problem seç → ünvanı
+**Müştəri:** e-poçt ilə qeydiyyat (kodla təsdiq) → xəritədə problem seç → ünvanı
 təsdiqlə → "axtarılır" ekranı → gələn təkliflərdən birini qəbul et → canlı
 status (qəbul edildi → yoldadır → çatdı → təmirdə → tamamlandı) → reytinq ver.
 
@@ -73,8 +76,8 @@ keçir.
 
 ## Növbəti addımlar
 
-- **Nömrə təsdiqi:** SMS provayderi + `signInWithOtp` / `verifyOtp`
-  (`testModePassword` ilə birlikdə silinir)
+- **Şifrənin bərpası:** unudulan şifrəni bərpa etmək yolu hazırda yoxdur
+  (`resetPasswordForEmail` + `recovery` kodu)
 - **Ödəniş:** yerli kart provayderi inteqrasiyası; komissiya real tutulsun
 - **Push bildiriş:** hazırda usta sorğunu yalnız tətbiq açıq olanda görür —
   15 dəqiqəlik pəncərə ilə birlikdə bu ən böyük məhdudiyyətdir

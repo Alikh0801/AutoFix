@@ -7,6 +7,7 @@ import { navigationRef } from './navigationRef';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
+import { OtpScreen } from '../screens/auth/OtpScreen';
 import { CustomerRoot } from './CustomerRoot';
 import { ProviderRoot } from './ProviderRoot';
 import { RootStackParamList } from './types';
@@ -34,6 +35,7 @@ function AuthStack() {
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="Otp" component={OtpScreen} />
     </Stack.Navigator>
   );
 }

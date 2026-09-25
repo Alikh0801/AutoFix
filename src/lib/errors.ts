@@ -4,6 +4,43 @@
 // `e.message` straight into the UI.
 
 const RULES: { match: RegExp; message: string }[] = [
+  // --- Auth ---
+  {
+    match: /invalid login credentials|invalid email or password/i,
+    message: 'E-poçt və ya şifrə yanlışdır.',
+  },
+  {
+    match: /email not confirmed/i,
+    message: 'E-poçt ünvanın təsdiqlənməyib. Qeydiyyatı tamamla.',
+  },
+  {
+    match: /user already registered|already been registered/i,
+    message: 'Bu e-poçt ünvanı artıq qeydiyyatdadır. Daxil ol.',
+  },
+  {
+    match: /token has expired|otp_expired|expired/i,
+    message: 'Kodun vaxtı bitib. Yeni kod istə.',
+  },
+  { match: /invalid token|token is invalid|otp/i, message: 'Kod yanlışdır. Yenidən yoxla.' },
+  {
+    match: /for security purposes|only request this after|rate limit|too many requests/i,
+    message: 'Çox tez-tez cəhd etdin. Bir az gözlə və yenidən yoxla.',
+  },
+  {
+    match: /password should be|weak password/i,
+    message: 'Şifrə kifayət qədər güclü deyil.',
+  },
+  { match: /unable to validate email|invalid email/i, message: 'E-poçt ünvanı düzgün deyil.' },
+  {
+    match: /error sending confirmation|smtp|failed to send/i,
+    message: 'Təsdiq məktubu göndərilmədi. Bir azdan yenidən cəhd et.',
+  },
+  {
+    match: /profiles_phone_key/i,
+    message: 'Bu telefon nömrəsi artıq başqa hesabda qeydiyyatdadır.',
+  },
+
+  // --- Business rules ---
   {
     match: /already have an active request/i,
     message: 'Artıq aktiv sifarişin var. Əvvəlcə onu bitir və ya ləğv et.',

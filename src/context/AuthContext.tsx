@@ -5,6 +5,8 @@ import { fetchMyProfile, setProviderStatus, Profile } from '../lib/api';
 import { unregisterPushNotifications } from '../lib/push';
 
 export interface SignUpInput {
+  email: string;
+  password: string;
   phone: string; // E.164, e.g. "+994553221111"
   fullName: string;
   dateOfBirth: string; // ISO "YYYY-MM-DD"
@@ -15,26 +17,24 @@ interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
   initializing: boolean;
+  /** Create the account and send a confirmation code to the address. No
+   *  session exists until that code is verified. */
   signUp: (input: SignUpInput) => Promise<void>;
-  signIn: (phone: string) => Promise<void>;
+  /** Finish registration with the code from the email. */
+  confirmSignUp: (email: string, token: string) => Promise<void>;
+  /** Send the confirmation code again. */
+  resendSignUpCode: (email: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// TEST-MODE AUTH: registration is phone-only with no real SMS verification
-// yet, but Supabase's phone provider still needs *some* credential to create
-// a session. We derive a fixed password from the phone number itself so it
-// never has to be shown to (or chosen by) the user. Replace this with
-// signInWithOtp/verifyOtp once a real SMS provider is wired up in production.
-//
-// The "jolt-" prefix predates the rename to AutoFix and deliberately stays:
-// it is the salt every existing test account's stored password was derived
-// from, so changing it would lock all of them out. It is invisible to users
-// and disappears entirely with the switch to OTP.
-function testModePassword(phoneE164: string): string {
-  return `jolt-test-${phoneE164}`;
-}
+// The phone number is still collected at registration and still lives on the
+// profile — the customer and the usta call each other on it — but it is no
+// longer the credential. handle_new_user already falls back to the phone in
+// the signup metadata when auth.users.phone is empty, which is the case for
+// every email account, so nothing in the database had to change for this.
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -71,12 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       profile,
       initializing,
-      signUp: async ({ phone, fullName, dateOfBirth, vehicle }) => {
+
+      signUp: async ({ email, password, phone, fullName, dateOfBirth, vehicle }) => {
         const { error } = await supabase.auth.signUp({
-          phone,
-          password: testModePassword(phone),
+          email,
+          password,
           options: {
+            // Read by the handle_new_user trigger to build the profile row and
+            // the first vehicle.
             data: {
+              phone,
               full_name: fullName.trim(),
               date_of_birth: dateOfBirth,
               vehicle_make: vehicle.make.trim(),
@@ -88,13 +92,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (error) throw error;
       },
-      signIn: async (phone) => {
-        const { error } = await supabase.auth.signInWithPassword({
-          phone,
-          password: testModePassword(phone),
-        });
+
+      confirmSignUp: async (email, token) => {
+        // On success the session lands through onAuthStateChange and the root
+        // navigator swaps to the app.
+        const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
         if (error) throw error;
       },
+
+      resendSignUpCode: async (email) => {
+        const { error } = await supabase.auth.resend({ type: 'signup', email });
+        if (error) throw error;
+      },
+
+      signIn: async (email, password) => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      },
+
       signOut: async () => {
         // Nothing else ever cleared is_online, so every signed-out provider
         // stayed "online" in the database with their last known coordinates.

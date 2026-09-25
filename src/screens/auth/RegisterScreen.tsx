@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -11,7 +12,14 @@ import { useAuth } from '../../context/AuthContext';
 import { AZ_DIAL_CODE, formatAzLocal, sanitizeAzLocal, validateAzPhone } from '../../lib/phone';
 import { formatDob, sanitizeDob, validateDob } from '../../lib/dob';
 import { formatAzPlate, sanitizeAzPlate, validateAzPlate } from '../../lib/plate';
-import { mapAuthError } from './LoginScreen';
+import { errorMessage } from '../../lib/errors';
+import {
+  MIN_PASSWORD_LENGTH,
+  normalizeEmail,
+  validateEmail,
+  validatePassword,
+  validatePasswordMatch,
+} from '../../lib/credentials';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -19,6 +27,10 @@ export function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
 
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordRepeat, setPasswordRepeat] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [dobDigits, setDobDigits] = useState('');
   const [make, setMake] = useState('');
@@ -34,6 +46,21 @@ export function RegisterScreen({ navigation }: Props) {
 
     if (!fullName.trim()) {
       setError('Ad və soyadını yaz.');
+      return;
+    }
+    const mail = validateEmail(email);
+    if (!mail.valid) {
+      setError(mail.error!);
+      return;
+    }
+    const pass = validatePassword(password);
+    if (!pass.valid) {
+      setError(pass.error!);
+      return;
+    }
+    const match = validatePasswordMatch(password, passwordRepeat);
+    if (!match.valid) {
+      setError(match.error!);
       return;
     }
     const phone = validateAzPhone(phoneDigits);
@@ -59,14 +86,19 @@ export function RegisterScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await signUp({
+        email: mail.value!,
+        password,
         phone: phone.e164!,
         fullName,
         dateOfBirth: dob.iso!,
         vehicle: { make, model, color, plate: plate.value! },
       });
-      // On success the session updates and RootNavigator swaps to the app.
+      // No session yet — the account exists but the address is unconfirmed.
+      // The code screen is what finishes registration.
+      navigation.navigate('Otp', { email: mail.value!, from: 'register' });
+      setLoading(false);
     } catch (e: any) {
-      setError(mapAuthError(e?.message));
+      setError(errorMessage(e, 'Qeydiyyat alınmadı. Yenidən cəhd et.'));
       setLoading(false);
     }
   };
@@ -88,7 +120,63 @@ export function RegisterScreen({ navigation }: Props) {
             style={styles.input}
           />
 
+          <Text style={styles.label}>E-poçt</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            onBlur={() => setEmail(normalizeEmail(email))}
+            placeholder="ad@nümunə.com"
+            placeholderTextColor={colors.textFaint}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Şifrə</Text>
+          <View style={styles.passwordRow}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={`Ən azı ${MIN_PASSWORD_LENGTH} simvol`}
+              placeholderTextColor={colors.textFaint}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="new-password"
+              textContentType="newPassword"
+              style={styles.passwordInput}
+            />
+            {/* One toggle for both fields: hiding the repeat while showing the
+                first defeats the point of asking twice. */}
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Şifrəni gizlət' : 'Şifrəni göstər'}
+            >
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color={colors.textDim} />
+            </Pressable>
+          </View>
+
+          <Text style={styles.label}>Şifrənin təkrarı</Text>
+          <TextInput
+            value={passwordRepeat}
+            onChangeText={setPasswordRepeat}
+            placeholder="Şifrəni bir daha yaz"
+            placeholderTextColor={colors.textFaint}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            style={styles.input}
+          />
+
           <Text style={styles.label}>Telefon</Text>
+          <Text style={styles.hint}>Usta və müştəri bir-biri ilə bu nömrə ilə əlaqə saxlayır.</Text>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>{AZ_DIAL_CODE}</Text>
             <TextInput
@@ -188,6 +276,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.cream,
   },
+  hint: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint, marginBottom: 8, marginTop: -2 },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 16,
+    height: 54,
+    paddingHorizontal: 16,
+  },
+  passwordInput: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.cream },
   phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
