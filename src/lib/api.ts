@@ -328,9 +328,27 @@ export async function fetchMyActiveJob(): Promise<ActiveJob | null> {
   };
 }
 
-export async function advanceJob(requestId: string, status: 'en_route' | 'arrived' | 'in_progress'): Promise<void> {
-  const { error } = await supabase.rpc('advance_job', { p_request_id: requestId, p_status: status });
+/** Move an accepted job forward. Reaching 'arrived' requires the four-digit
+ *  code the customer reads out — see migration 0029. */
+export async function advanceJob(
+  requestId: string,
+  status: 'en_route' | 'arrived' | 'in_progress',
+  pin?: string
+): Promise<void> {
+  const { error } = await supabase.rpc('advance_job', {
+    p_request_id: requestId,
+    p_status: status,
+    p_pin: pin ?? null,
+  });
   if (error) throw error;
+}
+
+/** The code the customer shows the usta on arrival. Only the customer of the
+ *  request can read it; the provider never receives it from any endpoint. */
+export async function fetchMyPickupPin(requestId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('my_pickup_pin', { p_request_id: requestId });
+  if (error) throw error;
+  return (data as string | null) ?? null;
 }
 
 export async function completeJob(requestId: string): Promise<void> {

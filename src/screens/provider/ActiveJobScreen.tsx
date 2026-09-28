@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Linking, Pressable, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Linking,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Keyboard,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,6 +36,8 @@ import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ActiveJob'>;
 
+const PIN_LENGTH = 4;
+
 function initials(name: string | null): string {
   if (!name) return 'M';
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
@@ -50,6 +62,9 @@ export function ActiveJobScreen({ navigation }: Props) {
   const [expanded, setExpanded] = useState(true);
   const autoCollapsedRef = useRef(false);
   const [cancelling, setCancelling] = useState(false);
+  const [askingPin, setAskingPin] = useState(false);
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const load = () => fetchMyActiveJob().then(setJob).catch(() => {}).finally(() => setLoading(false));
 
@@ -109,12 +124,36 @@ export function ActiveJobScreen({ navigation }: Props) {
 
   const onAdvance = async () => {
     if (!step) return;
+    // Arrival is the one step the usta cannot take alone: it needs the code
+    // the customer reads out, so open the prompt instead of advancing.
+    if (step.to === 'arrived') {
+      setPinError(null);
+      setPin('');
+      setAskingPin(true);
+      return;
+    }
     setBusy(true);
     try {
       await advanceJob(job.id, step.to);
       await load();
     } catch {
       // ignore
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onSubmitPin = async () => {
+    Keyboard.dismiss();
+    setPinError(null);
+    setBusy(true);
+    try {
+      await advanceJob(job.id, 'arrived', pin);
+      setAskingPin(false);
+      setPin('');
+      await load();
+    } catch (e: any) {
+      setPinError(errorMessage(e, 'Kod təsdiqlənmədi.'));
     } finally {
       setBusy(false);
     }
@@ -249,7 +288,50 @@ export function ActiveJobScreen({ navigation }: Props) {
             </>
           )}
 
-          {step ? (
+          {askingPin ? (
+            <View style={styles.pinBox}>
+              <Text style={styles.pinTitle}>Müştərinin kodunu daxil et</Text>
+              <Text style={styles.pinHint}>
+                Müştərinin ekranında 4 rəqəmli kod var. Onu soruş və bura yaz.
+              </Text>
+
+              <TextInput
+                value={pin}
+                onChangeText={(v) => {
+                  setPin(v.replace(/\D/g, '').slice(0, PIN_LENGTH));
+                  setPinError(null);
+                }}
+                keyboardType="number-pad"
+                maxLength={PIN_LENGTH}
+                autoFocus
+                placeholder="••••"
+                placeholderTextColor={colors.textFaint}
+                style={styles.pinInput}
+                accessibilityLabel="Müştərinin kodu"
+              />
+
+              {pinError && <Text style={styles.pinError}>{pinError}</Text>}
+
+              <View style={styles.pinActions}>
+                <Button
+                  label="Geri"
+                  variant="secondary"
+                  onPress={() => {
+                    setAskingPin(false);
+                    setPinError(null);
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Təsdiqlə"
+                  onPress={onSubmitPin}
+                  loading={busy}
+                  disabled={pin.length < PIN_LENGTH}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          ) : step ? (
             <Button label={step.label} onPress={onAdvance} loading={busy} />
           ) : (
             <Button label="İşi tamamladım" onPress={onComplete} loading={busy} />
@@ -306,6 +388,25 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 18,
   },
+  pinBox: { gap: 10 },
+  pinTitle: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.cream, textAlign: 'center' },
+  pinHint: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, textAlign: 'center', lineHeight: 18 },
+  pinInput: {
+    alignSelf: 'center',
+    width: 170,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    textAlign: 'center',
+    fontFamily: fonts.monoSemi,
+    fontSize: 28,
+    letterSpacing: 8,
+    color: colors.cream,
+  },
+  pinError: { fontFamily: fonts.bodyMedium, fontSize: 12.5, color: colors.danger, textAlign: 'center' },
+  pinActions: { flexDirection: 'row', gap: 10, marginTop: 2 },
   handleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 2 },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },

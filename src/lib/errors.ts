@@ -55,6 +55,14 @@ const RULES: { match: RegExp; message: string }[] = [
   { match: /price below minimum of ([\d.]+)/i, message: 'Təklif minimum qiymətdən aşağı ola bilməz.' },
   { match: /not your request|not your job|not a participant/i, message: 'Bu sorğu sənə aid deyil.' },
   { match: /can no longer be cancelled/i, message: 'Bu iş artıq ləğv edilə bilməz.' },
+  {
+    match: /pickup code is wrong/i,
+    message: 'Kod yanlışdır. Müştəridən bir daha soruş.',
+  },
+  {
+    match: /no pickup code/i,
+    message: 'Bu sifariş üçün kod yaradılmayıb. Müştəri ilə əlaqə saxla.',
+  },
   { match: /cannot move backwards|invalid status transition/i, message: 'Bu addım artıq keçilib.' },
   { match: /job is not active/i, message: 'İş artıq aktiv deyil.' },
   { match: /is not completed/i, message: 'Sifariş hələ tamamlanmayıb.' },

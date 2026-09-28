@@ -10,7 +10,7 @@ import { Card } from '../../components/Card';
 import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { StatusStepper } from '../../components/StatusStepper';
 import { useCategories } from '../../context/CategoriesContext';
-import { cancelActiveJob, fetchRequestDetail, RequestDetail } from '../../lib/api';
+import { cancelActiveJob, fetchMyPickupPin, fetchRequestDetail, RequestDetail } from '../../lib/api';
 import { distanceKm, etaMinutes } from '../../lib/location';
 import { RequestStatus } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -42,6 +42,25 @@ export function TrackingScreen({ route, navigation }: Props) {
   const [detail, setDetail] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  // The code the usta has to be told before they can mark themselves arrived.
+  const [pin, setPin] = useState<string | null>(null);
+
+  // Retried until it lands: a customer left without the code cannot let the
+  // usta start, so a single failed fetch must not strand them.
+  useEffect(() => {
+    if (pin) return;
+    let active = true;
+    const get = () =>
+      fetchMyPickupPin(requestId)
+        .then((p) => active && p && setPin(p))
+        .catch(() => {});
+    get();
+    const t = setInterval(get, 5000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, [requestId, pin]);
 
   useEffect(() => {
     let active = true;
@@ -165,6 +184,23 @@ export function TrackingScreen({ route, navigation }: Props) {
             <StatusStepper current={detail.status === 'searching' ? 'accepted' : (detail.status as any)} />
           )}
 
+          {/* Only while the usta is still on their way: once they are marked
+              arrived the code has done its job, and leaving it on screen just
+              invites it being read out to the wrong person later. */}
+          {pin && (detail.status === 'accepted' || detail.status === 'en_route') && (
+            <View style={styles.pinCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pinLabel}>Ustaya deyəcəyin kod</Text>
+                <Text style={styles.pinHint}>
+                  Usta gələndə bu kodu ona de — kodsuz işə başlaya bilməz.
+                </Text>
+              </View>
+              <Text style={styles.pinValue} accessibilityLabel={`Kod ${pin.split('').join(' ')}`}>
+                {pin}
+              </Text>
+            </View>
+          )}
+
           <Card style={styles.ustaCard}>
             <View style={styles.ustaRow}>
               <View style={styles.avatar}>
@@ -266,6 +302,20 @@ const styles = StyleSheet.create({
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center' },
   statusLine: { fontFamily: fonts.headingMedium, fontSize: 17, color: colors.cream, textAlign: 'center' },
   eta: { fontFamily: fonts.monoSemi, fontSize: 13, color: colors.amber, textAlign: 'center', marginTop: -8 },
+  pinCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  pinLabel: { fontFamily: fonts.bodySemi, fontSize: 13.5, color: colors.cream },
+  pinHint: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textDim, marginTop: 3, lineHeight: 16 },
+  pinValue: { fontFamily: fonts.monoSemi, fontSize: 30, letterSpacing: 5, color: colors.amber },
   ustaCard: { gap: 0 },
   ustaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
