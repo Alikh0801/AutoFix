@@ -27,16 +27,22 @@ import {
   cancelActiveJob,
   completeJob,
   setProviderStatus,
+  fetchArrivalRadius,
   ActiveJob,
   RequestStatus,
 } from '../../lib/api';
-import { getCurrentLocation } from '../../lib/location';
+import { getCurrentLocation, distanceKm } from '../../lib/location';
 import { errorMessage } from '../../lib/errors';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<ProviderStackParamList, 'ActiveJob'>;
 
 const PIN_LENGTH = 4;
+
+/** Metres below a kilometre, kilometres above it — 1840 m reads worse than 1.8 km. */
+function formatMetres(m: number): string {
+  return m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(1) + ' km';
+}
 
 function initials(name: string | null): string {
   if (!name) return 'M';
@@ -62,6 +68,7 @@ export function ActiveJobScreen({ navigation }: Props) {
   const [expanded, setExpanded] = useState(true);
   const autoCollapsedRef = useRef(false);
   const [cancelling, setCancelling] = useState(false);
+  const [radiusM, setRadiusM] = useState(150);
   const [askingPin, setAskingPin] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
@@ -80,6 +87,7 @@ export function ActiveJobScreen({ navigation }: Props) {
           setProviderStatus(true, loc.lat, loc.lng);
         })
         .catch(() => {});
+    fetchArrivalRadius().then(setRadiusM).catch(() => {});
     pushLocation();
     const loc = setInterval(pushLocation, 10000);
     return () => {
@@ -115,6 +123,16 @@ export function ActiveJobScreen({ navigation }: Props) {
 
   const category = getCategory(job.categoryId);
   const step = nextStep[job.status];
+
+  // Distance left to the pickup, for the arrival step only. Null while there
+  // is no fix yet or no pickup coordinate — in which case the button stays
+  // enabled and the server has the final say, rather than blocking an usta
+  // whose GPS simply has not settled.
+  const metresToPickup =
+    myLoc && job.pickupLat != null && job.pickupLng != null
+      ? distanceKm(myLoc.lat, myLoc.lng, job.pickupLat, job.pickupLng) * 1000
+      : null;
+  const tooFar = step?.to === 'arrived' && metresToPickup != null && metresToPickup > radiusM;
 
   const markers: LiveMapMarker[] = [];
   if (myLoc) markers.push({ id: 'me', lat: myLoc.lat, lng: myLoc.lng, variant: 'usta' });
@@ -332,7 +350,19 @@ export function ActiveJobScreen({ navigation }: Props) {
               </View>
             </View>
           ) : step ? (
-            <Button label={step.label} onPress={onAdvance} loading={busy} />
+            <View style={{ gap: 8 }}>
+              <Button
+                label={tooFar ? `Məkana ${formatMetres(metresToPickup!)} qalıb` : step.label}
+                onPress={onAdvance}
+                loading={busy}
+                disabled={tooFar}
+              />
+              {tooFar && (
+                <Text style={styles.geofenceHint}>
+                  "Çatdım" yalnız müştərinin yanında, {radiusM} m məsafədə işləyir.
+                </Text>
+              )}
+            </View>
           ) : (
             <Button label="İşi tamamladım" onPress={onComplete} loading={busy} />
           )}
@@ -388,6 +418,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 18,
   },
+  geofenceHint: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint, textAlign: 'center', lineHeight: 16 },
   pinBox: { gap: 10 },
   pinTitle: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.cream, textAlign: 'center' },
   pinHint: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textDim, textAlign: 'center', lineHeight: 18 },

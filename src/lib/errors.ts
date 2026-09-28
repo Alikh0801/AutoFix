@@ -60,6 +60,14 @@ const RULES: { match: RegExp; message: string }[] = [
     message: 'Kod yanlışdır. Müştəridən bir daha soruş.',
   },
   {
+    match: /too far from pickup: (\d+) m/i,
+    message: 'Hələ məkana çatmamısan. "Çatdım" yalnız müştərinin yanında işləyir.',
+  },
+  {
+    match: /location fix is stale|no location fix/i,
+    message: 'Yerin təyin olunmadı. GPS-i yoxla və bir neçə saniyə gözlə.',
+  },
+  {
     match: /no pickup code/i,
     message: 'Bu sifariş üçün kod yaradılmayıb. Müştəri ilə əlaqə saxla.',
   },

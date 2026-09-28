@@ -343,6 +343,15 @@ export async function advanceJob(
   if (error) throw error;
 }
 
+/** How near the pickup an usta has to be before 'arrived' is accepted. The
+ *  server is authoritative; this is so the app can say how far is left instead
+ *  of letting them tap into a rejection. */
+export async function fetchArrivalRadius(): Promise<number> {
+  const { data, error } = await supabase.rpc('arrival_radius_m');
+  if (error) throw error;
+  return Number(data ?? 150);
+}
+
 /** The code the customer shows the usta on arrival. Only the customer of the
  *  request can read it; the provider never receives it from any endpoint. */
 export async function fetchMyPickupPin(requestId: string): Promise<string | null> {
