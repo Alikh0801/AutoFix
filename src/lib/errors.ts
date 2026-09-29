@@ -47,7 +47,7 @@ const RULES: { match: RegExp; message: string }[] = [
   },
   {
     match: /provider is blocked|unpaid commission/i,
-    message: 'Ödənilməmiş komissiya borcun var. Təklif vermək üçün Qazanc bölməsindən borcu bağla.',
+    message: 'Komissiya kartından tutulmadı. Qazanc bölməsindən yenidən cəhd et.',
   },
   { match: /not a provider/i, message: 'Əvvəlcə Profil → Xidmət növlərim bölməsindən xidmət seç.' },
   { match: /request is not open|no longer open/i, message: 'Bu sorğu artıq aktiv deyil.' },
@@ -75,6 +75,28 @@ const RULES: { match: RegExp; message: string }[] = [
   { match: /job is not active/i, message: 'İş artıq aktiv deyil.' },
   { match: /is not completed/i, message: 'Sifariş hələ tamamlanmayıb.' },
   { match: /invalid category/i, message: 'Bu xidmət növü artıq mövcud deyil.' },
+
+  // --- Cards and commission ---
+  {
+    match: /no usable card/i,
+    message: 'Əvvəlcə Profil → Ödəniş kartları bölməsindən kart əlavə et.',
+  },
+  {
+    match: /cannot remove the only card/i,
+    message: 'Yeganə kartını silə bilməzsən. Əvvəlcə yeni kart əlavə et.',
+  },
+  {
+    match: /card has a settlement in progress/i,
+    message: 'Bu kartla ödəniş davam edir. Bitənə qədər gözlə.',
+  },
+  { match: /card is not usable/i, message: 'Bu kart hələ təsdiqlənməyib.' },
+  { match: /card not found|unknown card save/i, message: 'Kart tapılmadı.' },
+  { match: /nothing to settle/i, message: 'Ödəniləcək komissiya borcun yoxdur.' },
+  {
+    match: /settlement is not due yet/i,
+    message: 'Komissiya hər 3 tamamlanmış işdən sonra tutulur.',
+  },
+  { match: /unknown settlement/i, message: 'Ödəniş qeydi tapılmadı.' },
   { match: /not signed in|jwt|session/i, message: 'Sessiyanın vaxtı bitib. Yenidən daxil ol.' },
   { match: /network|fetch failed|timeout/i, message: 'Şəbəkə xətası. İnternet bağlantını yoxla.' },
   { match: /duplicate key|unique constraint/i, message: 'Bu məlumat artıq mövcuddur.' },

@@ -31,7 +31,7 @@ export class PayriffError extends Error {
   }
 }
 
-async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+async function call<T>(path: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
   if (!SECRET_KEY) throw new PayriffError('PAYRIFF_SECRET_KEY is not set on this project');
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -120,6 +120,33 @@ export function startCardSave(input: {
 
 export function getCardSave(cardSaveId: string): Promise<CardSaveState> {
   return call<CardSaveState>(`/cards/save/${encodeURIComponent(cardSaveId)}`, 'GET');
+}
+
+export interface SavedCard {
+  cardUuid: string;
+  maskedPan?: string;
+  cardBrand?: string;
+  createdDate?: string;
+}
+
+/**
+ * Every card Payriff currently holds for this customer.
+ *
+ * Only completed (REVERSED) saves appear here, which makes it the authority on
+ * what can actually be charged. A card we still believe is usable but which is
+ * missing from this list has gone — expired, or pulled by the bank — and would
+ * fail mid-settlement if we kept it.
+ *
+ * No expiry date or status is returned, so there is no way to warn a provider
+ * before a charge fails. That is why the failed-charge retry exists.
+ */
+export function listSavedCards(customerRef: string): Promise<SavedCard[]> {
+  return call<SavedCard[]>(`/cards/save?customerRef=${encodeURIComponent(customerRef)}`, 'GET');
+}
+
+/** Irreversible: the token cannot be used for AutoPay afterwards. */
+export async function deleteSavedCard(cardUuid: string): Promise<void> {
+  await call<null>(`/cards/${encodeURIComponent(cardUuid)}`, 'DELETE');
 }
 
 /** The card is chargeable only in this one state. */

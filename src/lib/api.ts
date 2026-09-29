@@ -508,6 +508,74 @@ async function readFunctionError(error: any): Promise<string | null> {
   }
 }
 
+async function invoke<T>(name: string, body: Record<string, unknown> = {}): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    const detail = await readFunctionError(error);
+    throw new Error(detail ?? error.message);
+  }
+  return data as T;
+}
+
+// --- Saved cards ------------------------------------------------------------
+
+/** Payriff's own lifecycle names. Only 'reversed' can actually be charged:
+ *  'verified' still has the 0.01 AZN verification outstanding. */
+export type CardStatus = 'created' | 'verified' | 'reversed' | 'reverse_failed' | 'declined' | 'expired';
+
+export interface SavedCard {
+  id: string;
+  maskedPan: string | null;
+  cardBrand: string | null;
+  status: CardStatus;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export function isCardUsable(card: SavedCard): boolean {
+  return card.status === 'reversed';
+}
+
+export async function fetchMyCards(): Promise<SavedCard[]> {
+  const { data, error } = await supabase.rpc('my_cards');
+  if (error) throw error;
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    maskedPan: c.masked_pan ?? null,
+    cardBrand: c.card_brand ?? null,
+    status: c.status as CardStatus,
+    isDefault: !!c.is_default,
+    createdAt: c.created_at,
+  }));
+}
+
+/** Opens a card save. The provider completes it on Payriff's page; the 0.01 AZN
+ *  verification is reversed automatically, so this costs them nothing. */
+export function startCardSave(): Promise<{ cardSaveId: string; paymentUrl: string }> {
+  return invoke('start-card-save');
+}
+
+/** Asks Payriff what actually happened, rather than waiting on a callback that
+ *  may lag behind the browser closing. */
+export function checkCardSave(cardSaveId: string): Promise<{ status: string; stale?: boolean }> {
+  return invoke('check-card-save', { cardSaveId });
+}
+
+export async function setDefaultCard(cardId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_default_card', { p_card_id: cardId });
+  if (error) throw error;
+}
+
+export function deleteCard(cardId: string): Promise<{ removed: boolean }> {
+  return invoke('delete-card', { cardId });
+}
+
+/** Drops cards Payriff no longer holds. Their list carries no expiry date, so
+ *  this is the only way to find a card that died since it was saved. */
+export function syncCards(): Promise<{ synced: boolean; removed: number }> {
+  return invoke('sync-cards');
+}
+
 // --- Provider profile & skills ----------------------------------------------
 
 /** Make the current user a provider (idempotent). The DB trigger also creates

@@ -2,13 +2,23 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
-import { fetchProviderEarnings, settleCommission, ProviderEarnings } from '../../lib/api';
+import {
+  fetchProviderEarnings,
+  fetchSettlementState,
+  settleCommission,
+  ProviderEarnings,
+  SettlementState,
+} from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { ProviderStackParamList } from '../../navigation/types';
+
+type Nav = NativeStackNavigationProp<ProviderStackParamList>;
 
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
@@ -22,13 +32,23 @@ function formatJobDate(iso: string | null): string {
 
 export function EarningsScreen() {
   const { getCategory } = useCategories();
+  const navigation = useNavigation<Nav>();
   const [data, setData] = useState<ProviderEarnings | null>(null);
+  // The earnings row only knows the debt total. Whether it is collectable
+  // yet — and whether the account is blocked over a failed charge — comes
+  // from the settlement state.
+  const [settlement, setSettlement] = useState<SettlementState | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setData(await fetchProviderEarnings());
+      const [earnings, state] = await Promise.all([
+        fetchProviderEarnings(),
+        fetchSettlementState().catch(() => null),
+      ]);
+      setData(earnings);
+      setSettlement(state);
     } catch {
       // keep last-known data on transient errors
     } finally {
@@ -52,31 +72,65 @@ export function EarningsScreen() {
 
   const maxAmount = Math.max(1, ...data.weekByDay.map((d) => d.amount));
 
+  // What the banner shows. `settlement` is the authority; the earnings row is
+  // only a fallback for the moment before it loads.
+  const owed = settlement?.commissionOwed ?? data.commissionOwed;
+  const jobsUntilDue = settlement?.jobsUntilDue ?? 0;
+  const isBlocked = settlement?.isBlocked ?? false;
+  const hasCard = settlement?.hasCard ?? true;
+  const isDue = owed > 0 && jobsUntilDue === 0;
+
+  const runSettlement = async () => {
+    setPaying(true);
+    try {
+      const res = await settleCommission();
+      await load();
+      if (res.settled) {
+        const fromCard = res.fromCard ?? 0;
+        Alert.alert(
+          'Ödənildi',
+          fromCard > 0
+            ? `${res.amount} AZN tutuldu — ${res.fromBalance} AZN balansdan, ${fromCard} AZN kartdan.`
+            : `${res.amount} AZN balansından tutuldu.`
+        );
+      } else {
+        // The charge failed, so nothing was taken from the balance either and
+        // the account is now blocked. Say what to do next, not just what broke.
+        Alert.alert(
+          'Ödəniş alınmadı',
+          `${res.reason ?? res.error ?? 'Kartdan tutulmadı.'}\n\nKartını yoxla və yenidən cəhd et, ya da yeni kart əlavə et.`
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Ödəniş alınmadı', errorMessage(e));
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const handlePayCommission = () => {
+    if (!hasCard) {
+      navigation.navigate('Cards');
+      return;
+    }
     Alert.alert(
       'Komissiya borcu',
-      `${data.commissionOwed} AZN — balansdan, çatmayan hissə isə kartından tutulacaq.`,
+      `${owed} AZN — əvvəlcə balansdan, çatmayan hissə isə kartından tutulacaq.`,
       [
         { text: 'Yox', style: 'cancel' },
-        {
-          text: 'Ödə',
-          onPress: async () => {
-            setPaying(true);
-            try {
-              const res = await settleCommission();
-              await load();
-              if (res.settled) {
-                Alert.alert('Ödənildi', 'Komissiya borcu bağlandı.');
-              } else {
-                Alert.alert('Ödəniş alınmadı', res.reason ?? res.error ?? 'Kartdan tutulmadı.');
-              }
-            } catch (e: any) {
-              Alert.alert('Ödəniş alınmadı', errorMessage(e));
-            } finally {
-              setPaying(false);
-            }
-          },
-        },
+        { text: 'Ödə', onPress: runSettlement },
+      ]
+    );
+  };
+
+  const handleBlockedRetry = () => {
+    Alert.alert(
+      'Hesab bloklanıb',
+      `Komissiya borcu ${owed} AZN. Kartdan tutulmayana qədər yeni sifariş ala bilməzsən.`,
+      [
+        { text: 'Bağla', style: 'cancel' },
+        { text: 'Kartı dəyiş', onPress: () => navigation.navigate('Cards') },
+        { text: 'Yenidən cəhd et', onPress: runSettlement },
       ]
     );
   };
@@ -114,18 +168,62 @@ export function EarningsScreen() {
           <Text style={styles.balanceValue}>{data.walletBalance} AZN</Text>
         </Card>
 
-        {data.commissionOwed > 0 && (
+        {/* Four states, in order of how much they demand of the usta:
+            blocked → no card → debt accruing → debt due. */}
+        {isBlocked ? (
+          <Pressable style={styles.debtBanner} onPress={handleBlockedRetry} disabled={paying}>
+            <View style={styles.debtIcon}>
+              <Feather name="slash" size={16} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Hesab bloklanıb — {owed} AZN</Text>
+              <Text style={styles.debtSub} numberOfLines={2}>
+                {settlement?.lastFailure ?? 'Komissiya kartından tutulmadı'}
+              </Text>
+            </View>
+            {paying ? (
+              <ActivityIndicator color={colors.amber} />
+            ) : (
+              <Text style={styles.debtPay}>Həll et</Text>
+            )}
+          </Pressable>
+        ) : !hasCard ? (
+          <Pressable style={styles.warnBanner} onPress={() => navigation.navigate('Cards')}>
+            <View style={styles.warnIcon}>
+              <Feather name="credit-card" size={16} color={colors.amber} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Kart əlavə edilməyib</Text>
+              <Text style={styles.debtSub}>Kart olmadan yeni sifarişə təklif verə bilməzsən</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.amber} />
+          </Pressable>
+        ) : isDue ? (
           <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
             <View style={styles.debtIcon}>
               <Feather name="alert-circle" size={16} color={colors.danger} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.debtTitle}>Komissiya borcu: {data.commissionOwed} AZN</Text>
+              <Text style={styles.debtTitle}>Komissiya borcu: {owed} AZN</Text>
               <Text style={styles.debtSub}>Balansdan, çatmasa kartdan tutulur</Text>
             </View>
             {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
           </Pressable>
-        )}
+        ) : owed > 0 ? (
+          <View style={styles.infoBanner}>
+            <View style={styles.infoIcon}>
+              <Feather name="clock" size={16} color={colors.textDim} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Yığılan komissiya: {owed} AZN</Text>
+              <Text style={styles.debtSub}>
+                {jobsUntilDue === 1
+                  ? 'Daha 1 işdən sonra tutulacaq'
+                  : `Daha ${jobsUntilDue} işdən sonra tutulacaq`}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
@@ -224,6 +322,44 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 10,
     backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warnBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.amberSoft,
+    borderWidth: 1,
+    borderColor: colors.amberDim,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  warnIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  infoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
