@@ -7,7 +7,7 @@ import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
 import { useCategories } from '../../context/CategoriesContext';
-import { fetchProviderEarnings, payCommissionFromWallet, ProviderEarnings } from '../../lib/api';
+import { fetchProviderEarnings, settleCommission, ProviderEarnings } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
@@ -53,24 +53,32 @@ export function EarningsScreen() {
   const maxAmount = Math.max(1, ...data.weekByDay.map((d) => d.amount));
 
   const handlePayCommission = () => {
-    Alert.alert('Komissiya borcu', `${data.commissionOwed} AZN balansdan ödənilsin?`, [
-      { text: 'Yox', style: 'cancel' },
-      {
-        text: 'Ödə',
-        onPress: async () => {
-          setPaying(true);
-          try {
-            const res = await payCommissionFromWallet();
-            await load();
-            Alert.alert('Ödənildi', `Komissiya borcu bağlandı. Balans: ${res.walletBalance} AZN`);
-          } catch (e: any) {
-            Alert.alert('Ödəniş alınmadı', errorMessage(e));
-          } finally {
-            setPaying(false);
-          }
+    Alert.alert(
+      'Komissiya borcu',
+      `${data.commissionOwed} AZN — balansdan, çatmayan hissə isə kartından tutulacaq.`,
+      [
+        { text: 'Yox', style: 'cancel' },
+        {
+          text: 'Ödə',
+          onPress: async () => {
+            setPaying(true);
+            try {
+              const res = await settleCommission();
+              await load();
+              if (res.settled) {
+                Alert.alert('Ödənildi', 'Komissiya borcu bağlandı.');
+              } else {
+                Alert.alert('Ödəniş alınmadı', res.reason ?? res.error ?? 'Kartdan tutulmadı.');
+              }
+            } catch (e: any) {
+              Alert.alert('Ödəniş alınmadı', errorMessage(e));
+            } finally {
+              setPaying(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   return (
@@ -113,7 +121,7 @@ export function EarningsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Komissiya borcu: {data.commissionOwed} AZN</Text>
-              <Text style={styles.debtSub}>Yuxarıdakı balansdan ödənilir</Text>
+              <Text style={styles.debtSub}>Balansdan, çatmasa kartdan tutulur</Text>
             </View>
             {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
           </Pressable>

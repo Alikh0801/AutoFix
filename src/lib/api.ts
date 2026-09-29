@@ -448,15 +448,64 @@ export async function fetchMyProviderState(): Promise<ProviderState | null> {
   };
 }
 
-/** TEST MODE: clear the provider's commission debt from their wallet balance. */
-export async function payCommissionFromWallet(): Promise<{ commissionBalance: number; walletBalance: number }> {
-  const { data, error } = await supabase.rpc('pay_commission_from_wallet');
+// --- Commission settlement --------------------------------------------------
+
+export interface SettlementState {
+  commissionOwed: number;
+  walletBalance: number;
+  isBlocked: boolean;
+  /** Completed jobs still to go before collection is due. */
+  jobsUntilDue: number;
+  hasCard: boolean;
+  lastFailure: string | null;
+}
+
+export async function fetchSettlementState(): Promise<SettlementState | null> {
+  const { data, error } = await supabase.rpc('my_settlement_state');
   if (error) throw error;
-  const r = (data ?? [])[0] ?? {};
+  const r = (data ?? [])[0];
+  if (!r) return null; // not a provider yet
   return {
-    commissionBalance: Number(r.commission_balance ?? 0),
+    commissionOwed: Number(r.commission_owed ?? 0),
     walletBalance: Number(r.wallet_balance ?? 0),
+    isBlocked: !!r.is_blocked,
+    jobsUntilDue: Number(r.jobs_until_due ?? 0),
+    hasCard: !!r.has_card,
+    lastFailure: r.last_failure ?? null,
   };
+}
+
+export interface SettlementResult {
+  settled: boolean;
+  amount?: number;
+  fromBalance?: number;
+  fromCard?: number;
+  /** Why the charge did not go through, when it did not. */
+  reason?: string;
+  error?: string;
+}
+
+/** Collects what is owed: balance first, saved card for the rest. Also what
+ *  the block screen's retry calls — the repair path and the normal path are
+ *  deliberately the same operation. */
+export async function settleCommission(): Promise<SettlementResult> {
+  const { data, error } = await supabase.functions.invoke('settle-commission', { body: {} });
+  if (error) {
+    const detail = await readFunctionError(error);
+    throw new Error(detail ?? error.message);
+  }
+  return data as SettlementResult;
+}
+
+/** supabase-js wraps a non-2xx Edge Function reply in an error whose body
+ *  still has to be read to recover our own message. */
+async function readFunctionError(error: any): Promise<string | null> {
+  try {
+    const body = await error?.context?.json?.();
+    return typeof body?.error === 'string' ? body.error : null;
+  } catch {
+    return null;
+  }
 }
 
 // --- Provider profile & skills ----------------------------------------------

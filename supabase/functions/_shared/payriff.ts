@@ -131,3 +131,79 @@ export function isCardReady(status: CardSaveStatus): boolean {
 export function isCardSaveTerminal(status: CardSaveStatus): boolean {
   return status === 'REVERSED' || status === 'DECLINED' || status === 'EXPIRED';
 }
+
+// --- AutoPay ----------------------------------------------------------------
+
+export interface AutoPayResult {
+  orderId: string;
+  amount: number;
+  /** THE field that says whether money moved. See chargeSavedCard below. */
+  paymentStatus: string;
+  operationType?: string;
+  currencyType?: string;
+  createdDate?: string;
+  transactionResponseDto?: {
+    transactionResult?: {
+      transactionResponse?: {
+        status?: string;
+        responseDescription?: string;
+      };
+    };
+  };
+}
+
+export interface ChargeOutcome {
+  ok: boolean;
+  orderId: string;
+  /** Payriff's paymentStatus, verbatim, for the audit row. */
+  gatewayStatus: string;
+  reason?: string;
+}
+
+/**
+ * Charges a saved card.
+ *
+ * The envelope lies about this one. Payriff's own documentation is explicit:
+ * the top-level `code` and `message` report whether the API request was
+ * processed, NOT whether the payment succeeded — their example returns
+ * code "00000" and "Operation performed successfully" alongside a declined
+ * transaction. Treating a success code as a successful charge would forgive
+ * commission that was never actually collected.
+ *
+ * So the outcome is read from payload.paymentStatus, and anything that is not
+ * an explicit success counts as a decline. Getting that wrong in the cautious
+ * direction blocks a provider who then retries; getting it wrong the other way
+ * writes off real money.
+ */
+const PAID_STATUSES = new Set(['COMPLETED', 'APPROVED']);
+
+export async function chargeSavedCard(input: {
+  cardUuid: string;
+  amount: number;
+  description: string;
+  callbackUrl: string;
+}): Promise<ChargeOutcome> {
+  const merchant = Deno.env.get('PAYRIFF_MERCHANT_ID');
+
+  const payload = await call<AutoPayResult>('/autoPay', 'POST', {
+    cardUuid: input.cardUuid,
+    amount: input.amount,
+    currency: 'AZN',
+    description: input.description,
+    callbackUrl: input.callbackUrl,
+    operation: 'PURCHASE',
+    ...(merchant ? { merchant } : {}),
+  });
+
+  const status = (payload.paymentStatus ?? '').toUpperCase();
+  const inner = payload.transactionResponseDto?.transactionResult?.transactionResponse;
+
+  return {
+    ok: PAID_STATUSES.has(status),
+    orderId: payload.orderId,
+    gatewayStatus: payload.paymentStatus ?? 'UNKNOWN',
+    reason: PAID_STATUSES.has(status)
+      ? undefined
+      : inner?.responseDescription || inner?.status || payload.paymentStatus || 'Declined',
+  };
+}
