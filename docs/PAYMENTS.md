@@ -144,8 +144,31 @@ axını ilə birlikdə** açılır.
 | Geri qaytarma | `POST /api/v3/refund` | ✅ |
 | Məxaric | `POST /api/v3/payout` | Faza 2 |
 
-Bütün çağırışlar `Authorization: <secret key>` başlığı ilə gedir — `Bearer`
-prefiksi yoxdur.
+Base URL: `https://api.payriff.com/api/v3/{method_name}`. Bütün çağırışlar
+`Authorization: <merchant secret key>` başlığı ilə gedir — **`Bearer` prefiksi
+yoxdur**, açar olduğu kimi göndərilir.
+
+Kart saxlama sənədindəki `{{app-key}}` ayrı bir dəyər deyil — Postman
+dəyişəninin adıdır və eyni merchant secret key-i bildirir. Authorization
+səhifəsi tək açar olduğunu birmənalı yazır.
+
+### Sandbox test kartı
+
+Yalnız sandbox mühitində işləyir; produksiyada real bank kartı lazımdır.
+
+| | |
+|---|---|
+| Kart sahibi | Test Test |
+| VISA nömrə | `4000007546012078` |
+| Müddət | 04/29 |
+| CVV | 893 |
+| OTP | `123456` |
+
+OTP sahəsinin olması diqqətəlayiqdir: kart **saxlanarkən** 3D Secure iştirak
+edir. Bu, gözlənilən modeldir — 3DS bir dəfə, usta brauzerin qarşısında
+olarkən keçilir, sonrakı autoPay tutulmaları isə saxlanmış token ilə
+istifadəçi iştirakı olmadan gedir. Buna baxmayaraq autoPay-in 3DS tələb
+etməyəcəyi **heç bir yerdə yazılmayıb**, ona görə sual açıq qalır.
 
 ### İki fərqli "uğur" lüğəti
 
@@ -295,11 +318,12 @@ acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım
 - **Minimum əməliyyat haqqı və minimum məbləğ.** Faizlər məlumdur, amma
   əməliyyat başına döşəmə haqq varmı və autoPay-in minimum məbləği nədir —
   hər ikisi 3 iş qaydasına təsir edir.
-- **`app-key` və secret key.** Kart saxlama sənədində `{{app-key}}`, Authorization
-  səhifəsində "merchant secret key" yazılıb. Eyni dəyər olduğu güman edilir,
-  dashboard-da açar alınanda təsdiqlənməlidir.
-- **Sandbox.** `sbpay.payriff.com` domeni sandbox-a işarə edir; test açarları
-  alınmalıdır.
+- **Sandbox base URL.** Authorization səhifəsi yalnız **bir** base URL verir
+  (`https://api.payriff.com/api/v3`) və ayrıca sandbox ünvanı göstərmir,
+  halbuki sandbox mühiti və test kartları mövcuddur. Ehtimal ki, mühiti
+  **açarın özü** müəyyən edir — yəni sandbox açarı ilə eyni URL-ə müraciət
+  olunur. Payriff-dən təsdiqlənməlidir. Təsdiqlənənə qədər
+  `PAYRIFF_BASE_URL` **qoyulmamalıdır**; kodda düzgün default var.
 - **`REVERSE_FAILED`.** Kart təsdiqlənib, amma 0.01 AZN geri qaytarılmayıb. Bu
   kart AutoPay üçün yararlıdırmı? Hazırda **yararsız** sayırıq — yalnız
   `REVERSED` işlək kart hesab olunur. Bu, ehtiyatlı seçimdir: səhv olsa, usta
