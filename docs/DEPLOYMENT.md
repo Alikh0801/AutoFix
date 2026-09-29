@@ -8,8 +8,7 @@ inanacaq.
 
 | Mərhələ | Vəziyyət |
 |---|---|
-| Migrationlar `0031`–`0034` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
-| Migration `0035` (kart ödənişini bağlayır) | ⏳ **run edilməyib** |
+| Migrationlar `0031`–`0035` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
 | Kod `main`-də | ✅ |
 | Edge Function deploy | ⏳ edilməyib (7 funksiya) |
 | `PAYRIFF_SECRET_KEY` secret | ⏳ qoyulmayıb |
