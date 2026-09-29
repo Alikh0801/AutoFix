@@ -22,6 +22,8 @@ interface BeginRow {
   from_balance: number;
   from_card: number;
   card_uuid: string | null;
+  /** Set when an earlier attempt reached Payriff but never resolved. */
+  pending_order_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -48,6 +50,21 @@ Deno.serve(async (req) => {
   const row: BeginRow | undefined = (data ?? [])[0];
   if (!row) return json({ settled: false, error: 'Nothing to settle' });
 
+  // An earlier attempt already reached Payriff and we never learned the
+  // result. Charging again could take the money twice, and no idempotency key
+  // is available to make that safe, so this waits instead.
+  if (row.pending_order_id) {
+    console.warn('settlement awaiting result — refusing to charge again', {
+      settlementId: row.settlement_id,
+      orderId: row.pending_order_id,
+    });
+    return json({
+      settled: false,
+      awaitingResult: true,
+      error: 'Previous charge is still awaiting a result',
+    });
+  }
+
   // The balance covered it all — no card involved.
   if (Number(row.from_card) <= 0) {
     return await finish(row, true, null, 'BALANCE_ONLY', null);
@@ -73,15 +90,39 @@ Deno.serve(async (req) => {
     return await finish(row, false, null, 'REQUEST_FAILED', detail);
   }
 
-  if (!outcome.ok) {
-    console.warn('autoPay declined', {
-      settlementId: row.settlement_id,
+  // Neither collected nor refused. Deciding either way here would be a guess
+  // with money on it, so the attempt is left open with its order id and the
+  // provider is told to wait — crucially, they are NOT blocked for it.
+  if (outcome.result === 'unresolved') {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const { error: markError } = await admin.rpc('mark_settlement_unresolved', {
+      p_settlement_id: row.settlement_id,
+      p_order_id: outcome.orderId,
+      p_gateway_status: outcome.gatewayStatus,
+    });
+    if (markError) {
+      // The order id is the only handle on a charge that may have taken money.
+      console.error('UNRESOLVED CHARGE NOT RECORDED', {
+        settlementId: row.settlement_id,
+        orderId: outcome.orderId,
+        gatewayStatus: outcome.gatewayStatus,
+        error: markError.message,
+      });
+    }
+    return json({
+      settled: false,
+      awaitingResult: true,
       gatewayStatus: outcome.gatewayStatus,
-      reason: outcome.reason,
     });
   }
 
-  return await finish(row, outcome.ok, outcome.orderId, outcome.gatewayStatus, outcome.reason ?? null);
+  return await finish(
+    row,
+    outcome.result === 'paid',
+    outcome.orderId,
+    outcome.gatewayStatus,
+    outcome.reason ?? null
+  );
 });
 
 /** Commits or fails the reserved settlement. Service role, because this is the

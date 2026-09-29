@@ -227,8 +227,20 @@ export interface AutoPayResult {
   };
 }
 
+/**
+ * Three outcomes, not two.
+ *
+ * 'unresolved' is the one that is easy to leave out and expensive to leave
+ * out. A status like PENDING or ACCEPTED means the payment has neither
+ * completed nor been refused, so calling it a failure would block a provider
+ * whose money may yet be taken, and calling it a success would forgive a debt
+ * that was never collected. Neither is acceptable, so it gets its own state:
+ * the settlement stays open and is decided later.
+ */
+export type ChargeResult = 'paid' | 'failed' | 'unresolved';
+
 export interface ChargeOutcome {
-  ok: boolean;
+  result: ChargeResult;
   orderId: string;
   /** Payriff's paymentStatus, verbatim, for the audit row. */
   gatewayStatus: string;
@@ -245,17 +257,25 @@ export interface ChargeOutcome {
  * transaction. Treating a success code as a successful charge would forgive
  * commission that was never actually collected.
  *
- * So the outcome is read from the payload. Two places can say the money moved:
- * `paymentStatus`, and the gateway's own response inside
- * transactionResponseDto — the documented approval values 00 / APPROVED /
- * PREAUTH-APPROVED. Either is accepted.
+ * So the outcome is read from payload.paymentStatus, whose values are fixed by
+ * the documented PaymentStatus enum.
  *
- * Both directions of error cost something, which is why neither reading is
- * dropped. Calling a paid charge failed blocks a provider whose money we
- * already took and leaves the debt standing; calling a failed charge paid
- * writes off commission nobody collected.
+ * We send operation PURCHASE, and for a purchase exactly one value means the
+ * money is ours: APPROVED.
+ *
+ * PREAUTH_APPROVED deliberately does NOT count. A preauthorization only holds
+ * the funds; capturing them needs a separate COMPLETE operation, and without
+ * one the hold lapses into PREAUTH_EXPIRED. Treating it as collected would
+ * clear a provider's debt against money that later evaporates.
+ *
+ * Note the spelling: the enum is PREAUTH_APPROVED with an underscore. The
+ * hyphenated PREAUTH-APPROVED belongs to the separate gateway-values table and
+ * never appears in this field.
  */
-const PAID_STATUSES = new Set(['COMPLETED', 'APPROVED', 'PREAUTH-APPROVED', 'SUCCESS']);
+const PAID_STATUSES = new Set(['APPROVED']);
+
+/** Refused outright, with certainty that no money moved. */
+const FAILED_STATUSES = new Set(['DECLINED', 'CANCELED', 'EXPIRED', 'PREAUTH_EXPIRED']);
 
 export async function chargeSavedCard(input: {
   cardUuid: string;
@@ -275,12 +295,25 @@ export async function chargeSavedCard(input: {
     ...(merchant ? { merchant } : {}),
   });
 
-  const status = (payload.paymentStatus ?? '').trim().toUpperCase();
+  // Enum values are case-sensitive and returned exactly as documented, so this
+  // only guards against stray whitespace.
+  const status = (payload.paymentStatus ?? '').trim();
   const inner = payload.transactionResponseDto?.transactionResult?.transactionResponse;
-  const ok = PAID_STATUSES.has(status) || isGatewayApproved(inner?.status);
 
-  if (!ok) {
-    console.warn('autoPay not approved', {
+  let result: ChargeResult;
+  if (PAID_STATUSES.has(status)) {
+    result = 'paid';
+  } else if (FAILED_STATUSES.has(status)) {
+    result = 'failed';
+  } else if (!status && isGatewayApproved(inner?.status)) {
+    // No lifecycle status at all, but the bank said yes. The money moved.
+    result = 'paid';
+  } else {
+    result = 'unresolved';
+  }
+
+  if (result !== 'paid') {
+    console.warn(`autoPay ${result}`, {
       orderId: payload.orderId,
       paymentStatus: payload.paymentStatus,
       gateway: inner?.status,
@@ -289,11 +322,12 @@ export async function chargeSavedCard(input: {
   }
 
   return {
-    ok,
+    result,
     orderId: payload.orderId,
     gatewayStatus: payload.paymentStatus ?? 'UNKNOWN',
-    reason: ok
-      ? undefined
-      : inner?.responseDescription || inner?.status || payload.paymentStatus || 'Declined',
+    reason:
+      result === 'paid'
+        ? undefined
+        : inner?.responseDescription || inner?.status || payload.paymentStatus || 'Declined',
   };
 }

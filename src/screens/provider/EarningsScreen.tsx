@@ -78,6 +78,7 @@ export function EarningsScreen() {
   const jobsUntilDue = settlement?.jobsUntilDue ?? 0;
   const isBlocked = settlement?.isBlocked ?? false;
   const hasCard = settlement?.hasCard ?? true;
+  const awaitingResult = settlement?.awaitingResult ?? false;
   const isDue = owed > 0 && jobsUntilDue === 0;
 
   const runSettlement = async () => {
@@ -85,7 +86,15 @@ export function EarningsScreen() {
     try {
       const res = await settleCommission();
       await load();
-      if (res.settled) {
+      if (res.awaitingResult) {
+        // Not a failure — the money may well have gone through. Saying
+        // "declined" here would be a guess, and inviting another attempt
+        // could take it twice.
+        Alert.alert(
+          'Ödəniş yoxlanılır',
+          'Bank hələ cavab verməyib. Nəticə bilinənə qədər təkrar tutulma olmayacaq — bir azdan bu səhifəni yenilə.'
+        );
+      } else if (res.settled) {
         const fromCard = res.fromCard ?? 0;
         Alert.alert(
           'Ödənildi',
@@ -170,9 +179,22 @@ export function EarningsScreen() {
           <Text style={styles.balanceValue}>{data.walletBalance} AZN</Text>
         </Card>
 
-        {/* Four states, in order of how much they demand of the usta:
-            blocked → no card → debt accruing → debt due. */}
-        {isBlocked ? (
+        {/* In order of how much they demand of the usta. An outstanding charge
+            comes first even when the account is still blocked from the
+            previous attempt: the only useful instruction then is to wait. */}
+        {awaitingResult ? (
+          <View style={styles.infoBanner}>
+            <View style={styles.infoIcon}>
+              <Feather name="loader" size={16} color={colors.textDim} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Ödəniş yoxlanılır</Text>
+              <Text style={styles.debtSub}>
+                Bank hələ cavab verməyib. Təkrar tutulma olmayacaq.
+              </Text>
+            </View>
+          </View>
+        ) : isBlocked ? (
           <Pressable style={styles.debtBanner} onPress={handleBlockedRetry} disabled={paying}>
             <View style={styles.debtIcon}>
               <Feather name="slash" size={16} color={colors.danger} />

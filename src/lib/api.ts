@@ -458,6 +458,8 @@ export interface SettlementState {
   jobsUntilDue: number;
   hasCard: boolean;
   lastFailure: string | null;
+  /** A charge is outstanding at the gateway with no result yet. */
+  awaitingResult: boolean;
 }
 
 export async function fetchSettlementState(): Promise<SettlementState | null> {
@@ -472,11 +474,16 @@ export async function fetchSettlementState(): Promise<SettlementState | null> {
     jobsUntilDue: Number(r.jobs_until_due ?? 0),
     hasCard: !!r.has_card,
     lastFailure: r.last_failure ?? null,
+    awaitingResult: !!r.awaiting_result,
   };
 }
 
 export interface SettlementResult {
   settled: boolean;
+  /** The charge reached Payriff but its result is not known yet. Not a
+   *  failure: nothing is blocked and nothing may be charged again until it
+   *  resolves. */
+  awaitingResult?: boolean;
   amount?: number;
   fromBalance?: number;
   fromCard?: number;

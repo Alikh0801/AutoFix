@@ -97,6 +97,10 @@ const RULES: { match: RegExp; message: string }[] = [
     message: 'Komissiya hər 3 tamamlanmış işdən sonra tutulur.',
   },
   { match: /unknown settlement/i, message: 'Ödəniş qeydi tapılmadı.' },
+  {
+    match: /awaiting a result|still awaiting/i,
+    message: 'Əvvəlki ödənişin nəticəsi gözlənilir. Bir azdan yenidən yoxla.',
+  },
   { match: /not signed in|jwt|session/i, message: 'Sessiyanın vaxtı bitib. Yenidən daxil ol.' },
   { match: /network|fetch failed|timeout/i, message: 'Şəbəkə xətası. İnternet bağlantını yoxla.' },
   { match: /duplicate key|unique constraint/i, message: 'Bu məlumat artıq mövcuddur.' },

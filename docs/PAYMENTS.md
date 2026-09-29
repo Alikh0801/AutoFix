@@ -156,6 +156,29 @@ Kodda bu iki lüğət ayrı funksiyalardır: `isSuccess()` yalnız zərfə baxı
 `01000` (WARNING) uğur sayılır, çünki əməliyyat baş tutub — amma log-a
 yazılır, yoxsa baxılmayan xəbərdarlıq yalnız nəyəsə baha başa gələndə üzə çıxar.
 
+### Üç nəticə, iki yox
+
+`PaymentStatus` enum-unda «bitməyib» mənasına gələn dəyərlər var: `PENDING`,
+`ACCEPTED`, `CREATED` və `PREAUTH_APPROVED`. Bunları uğursuz saymaq pulu
+tutulmuş ola bilən ustanı bloklayır; uğurlu saymaq isə tutulmamış borcu
+bağışlayır. Ona görə üçüncü hal var: **`unresolved`** — hesablaşma `pending`
+qalır, usta bloklanmır, və `order_id` sətirdə saxlanılır.
+
+`order_id`-nin saxlanması təkrar tutulmanın qarşısını alır. İdempotentlik
+açarı təsdiqlənməyib, ona görə açıq sifarişi olan hesablaşma üçün funksiya
+ikinci dəfə autoPay çağırmır — ustaya «gözlə» deyir.
+
+**Yalnız `APPROVED` «pul bizimdir» deməkdir.** `PREAUTH_APPROVED` pulu yalnız
+bloklayır; tutmaq üçün ayrıca `COMPLETE` əməliyyatı lazımdır, olmasa
+`PREAUTH_EXPIRED` olub azad olunur. Onu uğur saymaq borcu real olmayan pula
+qarşı bağlamaq olardı.
+
+Diqqət: enum `PREAUTH_APPROVED`-dir (alt xətt). Defisli `PREAUTH-APPROVED`
+gateway dəyərləri cədvəlinə aiddir və bu sahədə heç vaxt görünmür.
+
+`unresolved` halın həlli hələ **əl ilədir** — Order Information səhifəsi
+gələndə `order_id` ilə avtomatik uzlaşdırma yazılacaq.
+
 ### Bank mətninin tərcüməsi
 
 Uğursuz tutulmanın səbəbi iki mənbədən gəlir: Payriff-in öz sənədləşmiş
