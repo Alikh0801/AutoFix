@@ -9,8 +9,9 @@ inanacaq.
 | Mərhələ | Vəziyyət |
 |---|---|
 | Migrationlar `0031`–`0034` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
+| Migration `0035` (kart ödənişini bağlayır) | ⏳ **run edilməyib** |
 | Kod `main`-də | ✅ |
-| Edge Function deploy | ⏳ edilməyib |
+| Edge Function deploy | ⏳ edilməyib (7 funksiya) |
 | `PAYRIFF_SECRET_KEY` secret | ⏳ qoyulmayıb |
 | Android build (kart axını ilə) | ⏳ yığılmayıb |
 | Canlı test | ⏳ |
