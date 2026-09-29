@@ -81,7 +81,9 @@ geri qaytarma məntiqi yoxdur və olmamalıdır.
 ödənişin yan təsiri kimi** saxlamaq mümkündür — ayrıca yoxlama əməliyyatı
 olmadan. Usta üçün bu yaramır, çünki usta ödəmir, pul alır. Amma müştəri
 kartını saxlamaq lazım gələrsə (təkrar ödənişləri bir toxunuşla etmək üçün),
-düzgün yol məhz budur — ayrıca Card Save axını yox.
+düzgün yol məhz budur — ayrıca Card Save axını yox. Create Order sənədi
+əlavə edir: `cardSave: true` olanda **saxlanmış kartın tokeni callback-də
+gəlir**, yəni ayrıca sorğu lazım deyil.
 
 `customerRef` olaraq **ustanın `profiles.id`-si** göndərilir. Payriff kartları
 məhz bu istinad altında qruplaşdırır, yəni `List Saved Cards` çağıranda
@@ -209,6 +211,10 @@ qarşı bağlamaq olardı.
 Diqqət: enum `PREAUTH_APPROVED`-dir (alt xətt). Defisli `PREAUTH-APPROVED`
 gateway dəyərləri cədvəlinə aiddir və bu sahədə heç vaxt görünmür.
 
+Create Order səhifəsi bunu birbaşa təsdiqləyir: **«PURCHASE charges
+immediately; PRE_AUTH only reserves funds.»** Yəni preavtorizasiyanı uğur
+saymaq pulun tutulduğunu iddia etmək olardı, halbuki o yalnız bloklanıb.
+
 `unresolved` hal **avtomatik həll olunur**: açıq `order_id` olan hesablaşma
 üçün `settle-commission` ikinci dəfə autoPay çağırmır, `GET /orders/{orderId}`
 ilə nəticəni soruşur. Yalnız qəti cavab (`PAID`/`APPROVED` və ya
@@ -318,12 +324,13 @@ acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım
 - **Minimum əməliyyat haqqı və minimum məbləğ.** Faizlər məlumdur, amma
   əməliyyat başına döşəmə haqq varmı və autoPay-in minimum məbləği nədir —
   hər ikisi 3 iş qaydasına təsir edir.
-- **Sandbox base URL.** Authorization səhifəsi yalnız **bir** base URL verir
-  (`https://api.payriff.com/api/v3`) və ayrıca sandbox ünvanı göstərmir,
-  halbuki sandbox mühiti və test kartları mövcuddur. Ehtimal ki, mühiti
-  **açarın özü** müəyyən edir — yəni sandbox açarı ilə eyni URL-ə müraciət
-  olunur. Payriff-dən təsdiqlənməlidir. Təsdiqlənənə qədər
-  `PAYRIFF_BASE_URL` **qoyulmamalıdır**; kodda düzgün default var.
+- **Sandbox base URL.** Authorization səhifəsi yalnız bir base URL verir
+  (`https://api.payriff.com/api/v3`). Create Order-in cavab nümunəsindəki
+  `paymentUrl` isə **`sbpay.payriff.com`**-a işarə edir — yəni sandbox
+  ödəniş səhifəsinin hostu ayrıdır, API hostu isə eynidir. Bu, mühiti
+  **açarın müəyyən etdiyi** və düzgün `paymentUrl`-in cavabda qaytarıldığı
+  fikrini gücləndirir. Formal təsdiq qalır, amma praktikada
+  `PAYRIFF_BASE_URL` **qoyulmamalıdır**.
 - **`REVERSE_FAILED`.** Kart təsdiqlənib, amma 0.01 AZN geri qaytarılmayıb. Bu
   kart AutoPay üçün yararlıdırmı? Hazırda **yararsız** sayırıq — yalnız
   `REVERSED` işlək kart hesab olunur. Bu, ehtiyatlı seçimdir: səhv olsa, usta
@@ -338,8 +345,11 @@ acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım
 - **Kartın müddəti.** `List Saved Cards` nə bitmə tarixi, nə status qaytarır;
   Overview də bu barədə susur. Yəni kartın öldüyünü yalnız tutulma anında
   bilirik — `sync-cards` yalnız Payriff kartı siyahıdan çıxarsa kömək edir.
-- **`merchant` parametri.** AutoPay sorğusunda tələb olunub-olunmadığı aydın
-  deyil; kodda `PAYRIFF_MERCHANT_ID` varsa göndərilir, yoxsa yox.
+- **`merchant` parametri.** Create Order-in parametr cədvəlində belə bir sahə
+  **yoxdur** — merchant onsuz da secret key ilə müəyyən olunur. autoPay-in də
+  tələb etməməsi çox güman. Kodda `PAYRIFF_MERCHANT_ID` yalnız qoyulsa
+  göndərilir; **qoyulmamalıdır**. Sual formal olaraq açıq qalır, amma
+  gözlənilən cavab «lazım deyil»dir.
 - **Fiskal sənəd.** Fərdi sahibkar kimi xidmət satışında e-qaimə/kassa
   öhdəliyi ola bilər. Bu, Payriff-dən kənar mövzudur — mühasiblə
   dəqiqləşdirilməlidir.

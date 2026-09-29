@@ -107,8 +107,10 @@ Cavab gələndə `docs/PAYMENTS.md` → «Açıq suallar» bölməsi yenilənmə
 2. autoPay-də idempotency key dəstəyi varmı?
 3. `REVERSE_FAILED` kartı yararlıdırmı?
 4. Saxlanmış kartın müddəti bitəndə nə olur?
-5. autoPay-də `merchant` parametri məcburidirmi?
-6. Sandbox üçün ayrıca base URL varmı?
+5. autoPay-də `merchant` parametri məcburidirmi? *(Create Order-də belə bir
+   parametr yoxdur — gözlənilən cavab «lazım deyil»)*
+6. Sandbox üçün ayrıca base URL varmı? *(Create Order-in `paymentUrl`-i
+   `sbpay.payriff.com`-a işarə edir, yəni API hostu eyni qalır)*
 7. `PaymentStatus` enum-u ilə Order Information-un `PAID/PENDING/FAILED`
    dəyərləri niyə uyğun gəlmir?
 8. Əməliyyat başına minimum haqq və minimum məbləğ?
