@@ -227,13 +227,20 @@ Payriff yalnız komissiyanın özündən faiz alır.
 | 100 | 10.50 | 10.10 | 6.70 |
 
 50 AZN-lik işdə fərq 32%-dir. Üstəlik bu, təşviq etmək istədiyimiz ödəniş
-növünü — kartı — cəzalandırır. Üç seçim var: haqqı udmaq (hazırkı vəziyyət),
-kartlı işlərdə ustanın komissiyasına əlavə etmək, və ya müştəriyə ötürmək.
-Qərar verilməyib.
+növünü — kartı — cəzalandırır.
+
+**Qərar: haqqı biz udurıq.** Acquiring xərci ustanın komissiyasına əlavə
+edilmir və müştəriyə ötürülmür; usta balansına tam razılaşdırılmış qiymət
+yazılır. Ödəniş axını olduğu kimi qalır. Bu, bilərəkdən seçilmiş marja
+itkisidir — ustaya verilən söz sadə qalsın deyə ("razılaşdığın qiyməti tam
+alırsan"), və kart ödənişi cəzalandırılmasın deyə.
+
+Nəticəsi: kartlı işlərin payı artdıqca ümumi marja aşağı düşür. Qiymət
+siyasətini qurarkən bu nəzərə alınmalıdır — cədvəldəki "kartlı" sütunu real
+gəlirdir, "nağd" sütunu deyil.
 
 Qeyd: müştərinin hansı bankın kartı ilə ödədiyini saxlamırıq, ona görə real
-acquiring xərcini iş-iş hesablaya bilmirik. Haqqı ötürmək qərarı verilsə, bu
-məlumat ödəniş cavabından yazılmalı olacaq.
+acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım deyil.
 
 ## Açıq suallar
 
