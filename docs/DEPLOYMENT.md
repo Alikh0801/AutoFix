@@ -56,10 +56,11 @@ supabase functions deploy check-card-save       --project-ref <REF>
 supabase functions deploy delete-card           --project-ref <REF>
 supabase functions deploy sync-cards            --project-ref <REF>
 supabase functions deploy settle-commission     --project-ref <REF>
-supabase functions deploy payriff-card-callback --project-ref <REF> --no-verify-jwt
+supabase functions deploy payriff-card-callback    --project-ref <REF> --no-verify-jwt
+supabase functions deploy payriff-payment-callback --project-ref <REF> --no-verify-jwt
 ```
 
-Sonuncudakı `--no-verify-jwt` **mütləqdir**: Payriff callback göndərəndə
+Son iki əmrdəki `--no-verify-jwt` **mütləqdir**: Payriff callback göndərəndə
 JWT-si olmur, o bayraq olmasa callback 401 alıb çatmaz. Təhlükəsizlik itkisi
 yoxdur — callback-ə onsuz da inanmırıq, statusu həmişə Payriff API-sindən
 yenidən oxuyuruq (bax `docs/PAYMENTS.md` → Etibar modeli).
