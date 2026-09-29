@@ -188,11 +188,58 @@ yalnız `service_role`-a verilir.
 **İdempotentlik.** Hər hesablaşma sətri kilidlənir və `pending` olmayan hər
 şey səssizcə qaytarılır — callback iki dəfə gəlsə, pul bir dəfə hərəkət edir.
 
+## İqtisadiyyat
+
+Payriff-in tarifləri (2026-09 tarixində şifahi olaraq bildirilib, müqavilədə
+təsdiqlənməlidir):
+
+| Kart | Faiz |
+|---|---|
+| Kapital Bank | 3.5% |
+| Digər yerli banklar | 3.8% |
+| Xarici banklar | 4.5% |
+
+**Sabit haqq qeyd olunmayıb.** Bu, hesablaşma dövrü barədə əvvəlki narahatlığı
+aradan qaldırır: faiz miqyasdan asılı deyil, yəni 3 işi bir əməliyyatda tutmaq
+komissiyaya heç nə qazandırmır. 3 iş qaydası **yalnız istifadəçi rahatlığı**
+üçün qalır (usta hər işdən sonra tutulma bildirişi almır, uğursuz tutulma şansı
+üç dəfə az yaranır) — xərc arqumenti yoxdur. Yenə də **minimum əməliyyat haqqı**
+(məsələn «ən azı 0.20 AZN») soruşulmalıdır; belə bir döşəmə varsa, 3 iş qaydası
+onu üç dəfə seyrəldir və yenidən iqtisadi məna qazanır.
+
+Bizim komissiyamız faiz deyil, **pilləli sabit məbləğdir** (`commission_for`):
+≤5 → 1.0, 6–10 → 1.5, 11–15 → 2.0 … Effektiv dərəcə heç vaxt 10%-dən aşağı
+düşmür, yəni Payriff-in ən bahalı 4.5%-indən həmişə yuxarıdır. Model işləyir.
+
+### Nağd iş kartlı işdən sərfəlidir
+
+Bu, gözlənilməzdir və qərar tələb edir. Kartlı işdə Payriff **müştərinin
+ödənişindən** faizini götürür, biz isə ustanın balansına **tam qiyməti**
+yazırıq — yəni acquiring haqqını tamamilə özümüz udmuş oluruq. Nağd işdə isə
+Payriff yalnız komissiyanın özündən faiz alır.
+
+| Qiymət | Komissiya | Nağd: bizə qalan | Kartlı: bizə qalan (3.8%) |
+|---|---|---|---|
+| 5 | 1.00 | 0.96 | 0.81 |
+| 10 | 1.50 | 1.44 | 1.12 |
+| 20 | 2.50 | 2.40 | 1.74 |
+| 50 | 5.50 | 5.29 | 3.60 |
+| 100 | 10.50 | 10.10 | 6.70 |
+
+50 AZN-lik işdə fərq 32%-dir. Üstəlik bu, təşviq etmək istədiyimiz ödəniş
+növünü — kartı — cəzalandırır. Üç seçim var: haqqı udmaq (hazırkı vəziyyət),
+kartlı işlərdə ustanın komissiyasına əlavə etmək, və ya müştəriyə ötürmək.
+Qərar verilməyib.
+
+Qeyd: müştərinin hansı bankın kartı ilə ödədiyini saxlamırıq, ona görə real
+acquiring xərcini iş-iş hesablaya bilmirik. Haqqı ötürmək qərarı verilsə, bu
+məlumat ödəniş cavabından yazılmalı olacaq.
+
 ## Açıq suallar
 
-- **Tariflər.** Komissiya faizi və **əməliyyat başına sabit haqq** hələ
-  bilinmir. Sabit haqq varsa, 1.5 AZN-lik komissiya tutmaq iqtisadi cəhətdən
-  mənasız ola bilər — o halda hesablaşma dövrünü 3 işdən çox etmək lazım gələr.
+- **Minimum əməliyyat haqqı və minimum məbləğ.** Faizlər məlumdur, amma
+  əməliyyat başına döşəmə haqq varmı və autoPay-in minimum məbləği nədir —
+  hər ikisi 3 iş qaydasına təsir edir.
 - **`app-key` və secret key.** Kart saxlama sənədində `{{app-key}}`, Authorization
   səhifəsində "merchant secret key" yazılıb. Eyni dəyər olduğu güman edilir,
   dashboard-da açar alınanda təsdiqlənməlidir.
