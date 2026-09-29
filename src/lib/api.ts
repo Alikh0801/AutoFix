@@ -160,6 +160,15 @@ export interface CreateRequestInput {
   city?: string | null;
 }
 
+/** Whether customers may pay by card yet. Flow B is not built, so this is
+ *  false in production; the switch lives in platform_settings so enabling it
+ *  does not need an app release. */
+export async function fetchCardPaymentsEnabled(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('card_payments_enabled');
+  if (error) throw error;
+  return !!data;
+}
+
 /** Create a help request from GPS coordinates. Returns the new request id. */
 export async function createRequest(input: CreateRequestInput): Promise<string> {
   const { data, error } = await supabase.rpc('create_request', {

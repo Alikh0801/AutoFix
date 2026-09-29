@@ -20,6 +20,21 @@ Faza 1-də yalnız **A** qurulur. **B** üçün müştəri kart ödənişi və m
 lazımdır; Payriff daxili balansın lisenziya tələb etmədiyini bildirib, amma
 bu, yazılı təsdiqlə birlikdə saxlanılmalıdır.
 
+**B qurulana qədər kart ödənişi bağlıdır.** `platform_settings.card_payments_enabled`
+default `false`-dur; `create_request` kart sorğusunu rədd edir və tətbiq
+seçimi «tezliklə» kimi göstərir.
+
+Səbəb sadəcə yarımçıqlıq deyil. `complete_request` kartlı işdə ustanın
+balansına **tam qiyməti** yazır — real kart ödənişinin mənası budur. Amma
+`Create Order` heç yerdə çağırılmır, yəni müştəri «Kart» seçəndə **heç nə
+tutulmur**. Nəticədə müştəri xidməti pulsuz alır, AutoFix isə ustaya gəlməmiş
+pulu borclu qalır — usta həmin balansdan komissiyasını «ödəyir» və Faza 2-də
+onu çıxara bilər. Bunun üçün heç bir hack lazım deyildi, seçim tətbiqin
+özündə idi.
+
+B tamamlananda (`Create Order`, geri qaytarma, `payout`) bayraq `true` edilir
+— yeni migration lazım deyil.
+
 ## Komissiya: hesablanma və tutulma ayrıdır
 
 **Hesablanma — hər işdə.** İş tamamlananda komissiya `commission_ledger`-ə

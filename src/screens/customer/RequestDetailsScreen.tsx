@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { Card } from '../../components/Card';
 import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { useCategories } from '../../context/CategoriesContext';
 import { useLocation } from '../../context/LocationContext';
-import { createRequest } from '../../lib/api';
+import { createRequest, fetchCardPaymentsEnabled } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { CustomerStackParamList } from '../../navigation/types';
 
@@ -35,6 +35,20 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
   const [payment, setPayment] = useState<PayMethod>('cash');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Flow B is not built yet, so the server refuses card requests. Read the
+  // switch rather than hardcoding it — turning card payments on should not
+  // need another app release.
+  const [cardPay, setCardPay] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchCardPaymentsEnabled()
+      .then((on) => alive && setCardPay(on))
+      .catch(() => {}); // stays off, which is the safe side
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   if (!category) {
     return (
@@ -129,8 +143,18 @@ export function RequestDetailsScreen({ route, navigation }: Props) {
           <Text style={styles.label}>Ödəniş üsulu</Text>
           <View style={styles.payRow}>
             <PayOption icon="dollar-sign" label="Nağd" active={payment === 'cash'} onPress={() => setPayment('cash')} />
-            <PayOption icon="credit-card" label="Kart" active={payment === 'card'} onPress={() => setPayment('card')} />
+            {/* Card payments are not built yet; the backend refuses them too. */}
+            <PayOption
+              icon="credit-card"
+              label="Kart"
+              active={payment === 'card'}
+              disabled={!cardPay}
+              onPress={() => setPayment('card')}
+            />
           </View>
+          {!cardPay && (
+            <Text style={styles.payNote}>Kartla ödəniş hazırlanır. Hələlik yalnız nağd.</Text>
+          )}
 
           <Text style={styles.label}>Əlavə qeyd (istəyə bağlı)</Text>
           <TextInput
@@ -157,17 +181,28 @@ function PayOption({
   icon,
   label,
   active,
+  disabled,
   onPress,
 }: {
   icon: keyof typeof Feather.glyphMap;
   label: string;
   active: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }) {
+  const tint = disabled ? colors.textFaint : active ? colors.amber : colors.textDim;
   return (
-    <Pressable onPress={onPress} style={[styles.payOption, active && styles.payOptionActive]}>
-      <Feather name={icon} size={16} color={active ? colors.amber : colors.textDim} />
-      <Text style={[styles.payText, active && styles.payTextActive]}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.payOption, active && styles.payOptionActive, disabled && styles.payOptionOff]}
+      accessibilityState={{ disabled: !!disabled, selected: active }}
+    >
+      <Feather name={icon} size={16} color={tint} />
+      <Text style={[styles.payText, active && styles.payTextActive, disabled && styles.payTextOff]}>
+        {label}
+      </Text>
+      {disabled && <Text style={styles.paySoon}>tezliklə</Text>}
     </Pressable>
   );
 }
@@ -226,6 +261,16 @@ const styles = StyleSheet.create({
   payOptionActive: { borderColor: colors.amber, backgroundColor: colors.amberSoft },
   payText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.textDim },
   payTextActive: { color: colors.amber },
+  payOptionOff: { opacity: 0.5 },
+  payTextOff: { color: colors.textFaint },
+  paySoon: { fontFamily: fonts.body, fontSize: 10, color: colors.textFaint },
+  payNote: {
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    color: colors.textDim,
+    marginTop: -6,
+    marginBottom: 4,
+  },
   noteInput: {
     backgroundColor: colors.surface,
     borderWidth: 1,

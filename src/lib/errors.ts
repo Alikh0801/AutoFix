@@ -75,6 +75,10 @@ const RULES: { match: RegExp; message: string }[] = [
   { match: /job is not active/i, message: 'İş artıq aktiv deyil.' },
   { match: /is not completed/i, message: 'Sifariş hələ tamamlanmayıb.' },
   { match: /invalid category/i, message: 'Bu xidmət növü artıq mövcud deyil.' },
+  {
+    match: /card payments are not available/i,
+    message: 'Kartla ödəniş hazırlanır. Hələlik nağd seç.',
+  },
 
   // --- Cards and commission ---
   {
