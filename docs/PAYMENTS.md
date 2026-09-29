@@ -71,7 +71,17 @@ ilişir.
 
 **Saxlama.** `POST /api/v3/cards/save` çağırılır, usta `paymentUrl`-ə
 yönləndirilir və kart məlumatlarını Payriff-in səhifəsində daxil edir. Real
-tutulma olmur — 0.01 AZN yoxlama əməliyyatıdır və avtomatik geri qaytarılır.
+tutulma olmur — 0.01 AZN yoxlama əməliyyatıdır və Payriff onu **server
+tərəfində özü geri qaytarır** (`REVERSED`). Bizdən ayrıca `refund` sorğusu
+tələb olunmur; sənəd bunu açıq yazır. Ona görə kodda 0.01 AZN üçün heç bir
+geri qaytarma məntiqi yoxdur və olmamalıdır.
+
+**Alternativ yol (indi istifadə olunmur).** `Create Order` və
+`Pre-Authorization` sorğularına `cardSave: true` göndərməklə kartı **real
+ödənişin yan təsiri kimi** saxlamaq mümkündür — ayrıca yoxlama əməliyyatı
+olmadan. Usta üçün bu yaramır, çünki usta ödəmir, pul alır. Amma müştəri
+kartını saxlamaq lazım gələrsə (təkrar ödənişləri bir toxunuşla etmək üçün),
+düzgün yol məhz budur — ayrıca Card Save axını yox.
 
 `customerRef` olaraq **ustanın `profiles.id`-si** göndərilir. Payriff kartları
 məhz bu istinad altında qruplaşdırır, yəni `List Saved Cards` çağıranda
@@ -294,7 +304,16 @@ acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım
   kart AutoPay üçün yararlıdırmı? Hazırda **yararsız** sayırıq — yalnız
   `REVERSED` işlək kart hesab olunur. Bu, ehtiyatlı seçimdir: səhv olsa, usta
   artıq kart əlavə etmək məcburiyyətində qalır; əksi isə komissiyanın
-  tutulmadığı anda üzə çıxar. Payriff-dən dəqiqləşdirilməlidir.
+  tutulmadığı anda üzə çıxar. **Card Save → Overview səhifəsində izah
+  yoxdur** — yalnız Payriff cavab verə bilər.
+- **3D Secure.** Saxlanmış kartdan tutulma zamanı emitent 3DS tələb edə
+  bilərmi? Sənədin heç bir səhifəsində bu barədə söz yoxdur. Bizim axında usta
+  tutulma anında telefonda olmaya bilər, yəni 3DS çıxarsa əməliyyat uğursuz
+  olar və usta öz günahı olmadan bloklanar. Baş verirsə, blok qaydası
+  dəyişməlidir.
+- **Kartın müddəti.** `List Saved Cards` nə bitmə tarixi, nə status qaytarır;
+  Overview də bu barədə susur. Yəni kartın öldüyünü yalnız tutulma anında
+  bilirik — `sync-cards` yalnız Payriff kartı siyahıdan çıxarsa kömək edir.
 - **`merchant` parametri.** AutoPay sorğusunda tələb olunub-olunmadığı aydın
   deyil; kodda `PAYRIFF_MERCHANT_ID` varsa göndərilir, yoxsa yox.
 - **Fiskal sənəd.** Fərdi sahibkar kimi xidmət satışında e-qaimə/kassa
