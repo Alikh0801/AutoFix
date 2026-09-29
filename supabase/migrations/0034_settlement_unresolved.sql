@@ -133,8 +133,13 @@ $$;
 -- ---------------------------------------------------------------------------
 -- my_settlement_state — an unresolved attempt is neither a debt the provider
 -- can act on nor a failure, so the app needs to know one is outstanding.
+--
+-- Dropped first for the same reason as begin_settlement: adding an OUT column
+-- changes the return type, which `create or replace` refuses.
 -- ---------------------------------------------------------------------------
-create or replace function my_settlement_state()
+drop function if exists my_settlement_state();
+
+create function my_settlement_state()
 returns table (
   commission_owed   numeric,
   wallet_balance    numeric,
