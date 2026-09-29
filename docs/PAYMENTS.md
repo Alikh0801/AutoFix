@@ -126,16 +126,48 @@ axını ilə birlikdə** açılır.
 | Nə üçün | Endpoint | Vəziyyət |
 |---|---|---|
 | Kart saxlama | `POST /api/v3/cards/save` | ✅ sənədləşib |
-| Saxlama nəticəsi | Get Card Save Status | ⏳ səhifə gözlənilir |
-| Kart siyahısı | List Saved Cards | ⏳ |
-| Kart silmə | Delete Saved Card | ⏳ |
-| Komissiya tutulması | `POST /api/v3/autoPay` | ⏳ |
+| Saxlama nəticəsi | `GET /api/v3/cards/save/{cardSaveId}` | ✅ |
+| Kart siyahısı | `GET /api/v3/cards/save?customerRef=` | ✅ |
+| Kart silmə | `DELETE /api/v3/cards/{cardUuid}` | ✅ |
+| Komissiya tutulması | `POST /api/v3/autoPay` | ✅ |
 | Təsdiqləmə | `GET /api/v3/orders/{orderId}` | ✅ |
 | Geri qaytarma | `POST /api/v3/refund` | ✅ |
 | Məxaric | `POST /api/v3/payout` | Faza 2 |
 
 Bütün çağırışlar `Authorization: <secret key>` başlığı ilə gedir — `Bearer`
 prefiksi yoxdur.
+
+### İki fərqli "uğur" lüğəti
+
+Bu, inteqrasiyanın ən təhlükəli yeridir və Payriff sənədi bunu açıq yazır:
+**ResultCode API əməliyyatının texniki nəticəsidir, ödənişin nəticəsi deyil.**
+Yəni `code: "00000"` yalnız "sorğu düzgün emal olundu" deməkdir — həmin
+cavabın içində rədd edilmiş bir ödəniş ola bilər.
+
+| Lüğət | Harada | Dəyərlər |
+|---|---|---|
+| ResultCode | zərfin `code` sahəsi | `00000` SUCCESS, `01000` WARNING, `15000` ERROR, `15400` INVALID_PARAMETERS, `14010` UNAUTHORIZED, `14013` TOKEN_NOT_PRESENT, `14014` INVALID_TOKEN, `14015` INVALID_ORIGIN, `666` CHECKING |
+| Gateway dəyəri | `payload` içində | `00`, `APPROVED`, `PREAUTH-APPROVED` |
+
+Kodda bu iki lüğət ayrı funksiyalardır: `isSuccess()` yalnız zərfə baxır,
+`isGatewayApproved()` isə bankın cavabına. Pulun hərəkət edib-etmədiyi qərarı
+**heç vaxt** zərfin `code`-undan verilmir.
+
+`01000` (WARNING) uğur sayılır, çünki əməliyyat baş tutub — amma log-a
+yazılır, yoxsa baxılmayan xəbərdarlıq yalnız nəyəsə baha başa gələndə üzə çıxar.
+
+### Bank mətninin tərcüməsi
+
+Uğursuz tutulmanın səbəbi iki mənbədən gəlir: Payriff-in öz sənədləşmiş
+mesajları və bankın `responseDescription` mətni. İkincisi bizim idarə
+etmədiyimiz, ingiliscə və çox vaxt anlaşılmaz mətndir ("Do not honour").
+`errors.ts` içindəki `gatewayMessage()` onu Azərbaycan dilinə çevirir və
+tanımadığı mətni **heç vaxt** olduğu kimi göstərmir.
+
+Ayrılığın səbəbi məsləhətin fərqli olmasıdır: bir hissəsini usta özü həll edə
+bilər (kartda pul yoxdur, kartın müddəti bitib), qalanı isə bizim tərəfimizin
+problemidir — orada "bir azdan yenidən cəhd et" demək düzgündür, əsl səbəbi
+yazmaq isə ustanı yanlış yönləndirər.
 
 ## Etibar modeli
 
@@ -166,6 +198,13 @@ yalnız `service_role`-a verilir.
   dashboard-da açar alınanda təsdiqlənməlidir.
 - **Sandbox.** `sbpay.payriff.com` domeni sandbox-a işarə edir; test açarları
   alınmalıdır.
+- **`REVERSE_FAILED`.** Kart təsdiqlənib, amma 0.01 AZN geri qaytarılmayıb. Bu
+  kart AutoPay üçün yararlıdırmı? Hazırda **yararsız** sayırıq — yalnız
+  `REVERSED` işlək kart hesab olunur. Bu, ehtiyatlı seçimdir: səhv olsa, usta
+  artıq kart əlavə etmək məcburiyyətində qalır; əksi isə komissiyanın
+  tutulmadığı anda üzə çıxar. Payriff-dən dəqiqləşdirilməlidir.
+- **`merchant` parametri.** AutoPay sorğusunda tələb olunub-olunmadığı aydın
+  deyil; kodda `PAYRIFF_MERCHANT_ID` varsa göndərilir, yoxsa yox.
 - **Fiskal sənəd.** Fərdi sahibkar kimi xidmət satışında e-qaimə/kassa
   öhdəliyi ola bilər. Bu, Payriff-dən kənar mövzudur — mühasiblə
   dəqiqləşdirilməlidir.

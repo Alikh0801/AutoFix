@@ -17,11 +17,51 @@ interface Envelope<T> {
   payload: T;
 }
 
-/** Payriff reports success under more than one code depending on the call. */
-const SUCCESS_CODES = new Set(['00000', '00', 'APPROVED', 'PREAUTH-APPROVED']);
+/**
+ * Two different vocabularies, and mixing them up is the whole trap.
+ *
+ * ResultCodes describe the API operation — "did the request get processed" —
+ * and live in the envelope's `code`. Gateway values describe what the bank did
+ * with the money and appear inside the payload. A request can be perfectly
+ * well-formed (00000) and still carry a declined payment, which is exactly the
+ * case that would forgive commission nobody collected.
+ */
+const RESULT_CODE_OK = new Set([
+  '00000', // SUCCESS
+  '01000', // WARNING — succeeded, but Payriff wants us to notice something
+  // Not a documented ResultCode; tolerated because some endpoints have been
+  // seen echoing the gateway's own "00" here. Accepting it costs nothing:
+  // whether money moved is decided in chargeSavedCard, never from this code.
+  '00',
+]);
 
+/** Payriff's documented ResultCodes, for logs that have to be read later. */
+const RESULT_CODES: Record<string, string> = {
+  '00000': 'SUCCESS',
+  '01000': 'WARNING',
+  '15000': 'ERROR — internal system error',
+  '15400': 'INVALID_PARAMETERS',
+  '14010': 'UNAUTHORIZED',
+  '14013': 'TOKEN_NOT_PRESENT',
+  '14014': 'INVALID_TOKEN',
+  '14015': 'INVALID_ORIGIN',
+  '666': 'CHECKING — invalid or unsupported procedure',
+};
+
+export function describeResultCode(code: string | undefined): string {
+  return RESULT_CODES[(code ?? '').trim()] ?? `UNKNOWN (${code ?? '—'})`;
+}
+
+/** Whether the API call itself went through. Says nothing about the money. */
 export function isSuccess(code: string): boolean {
-  return SUCCESS_CODES.has((code ?? '').toUpperCase());
+  return RESULT_CODE_OK.has((code ?? '').trim());
+}
+
+/** The gateway's own approval values — these DO mean money moved. */
+const GATEWAY_APPROVED = new Set(['00', 'APPROVED', 'PREAUTH-APPROVED']);
+
+export function isGatewayApproved(value: string | undefined | null): boolean {
+  return GATEWAY_APPROVED.has((value ?? '').trim().toUpperCase());
 }
 
 export class PayriffError extends Error {
@@ -53,7 +93,15 @@ async function call<T>(path: string, method: 'GET' | 'POST' | 'DELETE', body?: u
   }
 
   if (!isSuccess(json.code)) {
-    throw new PayriffError(json.internalMessage || json.message || `Payriff error ${json.code}`, json.code);
+    throw new PayriffError(
+      json.internalMessage || json.message || describeResultCode(json.code),
+      json.code
+    );
+  }
+  // 01000 still returns a payload, so the call goes on — but a warning we never
+  // look at is a warning that only surfaces once it has cost something.
+  if (json.code === '01000') {
+    console.warn('Payriff WARNING', { path, message: json.message, internal: json.internalMessage });
   }
   return json.payload;
 }
@@ -197,12 +245,17 @@ export interface ChargeOutcome {
  * transaction. Treating a success code as a successful charge would forgive
  * commission that was never actually collected.
  *
- * So the outcome is read from payload.paymentStatus, and anything that is not
- * an explicit success counts as a decline. Getting that wrong in the cautious
- * direction blocks a provider who then retries; getting it wrong the other way
- * writes off real money.
+ * So the outcome is read from the payload. Two places can say the money moved:
+ * `paymentStatus`, and the gateway's own response inside
+ * transactionResponseDto — the documented approval values 00 / APPROVED /
+ * PREAUTH-APPROVED. Either is accepted.
+ *
+ * Both directions of error cost something, which is why neither reading is
+ * dropped. Calling a paid charge failed blocks a provider whose money we
+ * already took and leaves the debt standing; calling a failed charge paid
+ * writes off commission nobody collected.
  */
-const PAID_STATUSES = new Set(['COMPLETED', 'APPROVED']);
+const PAID_STATUSES = new Set(['COMPLETED', 'APPROVED', 'PREAUTH-APPROVED', 'SUCCESS']);
 
 export async function chargeSavedCard(input: {
   cardUuid: string;
@@ -222,14 +275,24 @@ export async function chargeSavedCard(input: {
     ...(merchant ? { merchant } : {}),
   });
 
-  const status = (payload.paymentStatus ?? '').toUpperCase();
+  const status = (payload.paymentStatus ?? '').trim().toUpperCase();
   const inner = payload.transactionResponseDto?.transactionResult?.transactionResponse;
+  const ok = PAID_STATUSES.has(status) || isGatewayApproved(inner?.status);
+
+  if (!ok) {
+    console.warn('autoPay not approved', {
+      orderId: payload.orderId,
+      paymentStatus: payload.paymentStatus,
+      gateway: inner?.status,
+      description: inner?.responseDescription,
+    });
+  }
 
   return {
-    ok: PAID_STATUSES.has(status),
+    ok,
     orderId: payload.orderId,
     gatewayStatus: payload.paymentStatus ?? 'UNKNOWN',
-    reason: PAID_STATUSES.has(status)
+    reason: ok
       ? undefined
       : inner?.responseDescription || inner?.status || payload.paymentStatus || 'Declined',
   };

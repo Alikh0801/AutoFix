@@ -15,7 +15,7 @@ import {
   ProviderEarnings,
   SettlementState,
 } from '../../lib/api';
-import { errorMessage } from '../../lib/errors';
+import { errorMessage, gatewayMessage } from '../../lib/errors';
 import { ProviderStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<ProviderStackParamList>;
@@ -95,10 +95,11 @@ export function EarningsScreen() {
         );
       } else {
         // The charge failed, so nothing was taken from the balance either and
-        // the account is now blocked. Say what to do next, not just what broke.
+        // the account is now blocked. The bank's own wording is English and
+        // often cryptic, so it is translated before it reaches the usta.
         Alert.alert(
           'Ödəniş alınmadı',
-          `${res.reason ?? res.error ?? 'Kartdan tutulmadı.'}\n\nKartını yoxla və yenidən cəhd et, ya da yeni kart əlavə et.`
+          `${gatewayMessage(res.reason ?? res.error)}\n\nYenidən cəhd edə, ya da yeni kart əlavə edə bilərsən.`
         );
       }
     } catch (e: any) {
@@ -124,9 +125,10 @@ export function EarningsScreen() {
   };
 
   const handleBlockedRetry = () => {
+    const why = settlement?.lastFailure ? `\n\nSəbəb: ${gatewayMessage(settlement.lastFailure)}` : '';
     Alert.alert(
       'Hesab bloklanıb',
-      `Komissiya borcu ${owed} AZN. Kartdan tutulmayana qədər yeni sifariş ala bilməzsən.`,
+      `Komissiya borcu ${owed} AZN. Kartdan tutulmayana qədər yeni sifariş ala bilməzsən.${why}`,
       [
         { text: 'Bağla', style: 'cancel' },
         { text: 'Kartı dəyiş', onPress: () => navigation.navigate('Cards') },
@@ -178,7 +180,7 @@ export function EarningsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Hesab bloklanıb — {owed} AZN</Text>
               <Text style={styles.debtSub} numberOfLines={2}>
-                {settlement?.lastFailure ?? 'Komissiya kartından tutulmadı'}
+                {gatewayMessage(settlement?.lastFailure, 'Komissiya kartından tutulmadı')}
               </Text>
             </View>
             {paying ? (
