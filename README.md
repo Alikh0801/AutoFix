@@ -12,10 +12,14 @@ Qeydiyyat **e-poçt + şifrə** ilədir; ünvan 6 rəqəmli kodla təsdiqlənir.
 Telefon nömrəsi hələ də alınır, çünki müştəri ilə usta bir-birinə onunla
 zəng edir — sadəcə artıq giriş açarı deyil.
 
-Hələ **saxta (placeholder)** qalan bir şey var:
+**Ödəniş** artıq saxta deyil: Payriff inteqrasiyası qurulub — usta kartını
+saxlayır, komissiya hər 3 tamamlanmış işdən sonra əvvəlcə balansdan, çatmayan
+hissə isə kartdan tutulur. Model və hər qərarın səbəbi
+[`docs/PAYMENTS.md`](docs/PAYMENTS.md)-dədir.
 
-- **Ödəniş** — kart ödənişi real şəkildə tutulmur, komissiya saxta pul
-  kisəsi balansından bağlanır (migrasiya `0011`).
+Kod hazırdır, amma **canlı test edilməyib** — Edge Function-lar hələ deploy
+olunmayıb. Vəziyyət və qalan addımlar:
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Texnologiya
 
