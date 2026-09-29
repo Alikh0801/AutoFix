@@ -176,8 +176,23 @@ qarşı bağlamaq olardı.
 Diqqət: enum `PREAUTH_APPROVED`-dir (alt xətt). Defisli `PREAUTH-APPROVED`
 gateway dəyərləri cədvəlinə aiddir və bu sahədə heç vaxt görünmür.
 
-`unresolved` halın həlli hələ **əl ilədir** — Order Information səhifəsi
-gələndə `order_id` ilə avtomatik uzlaşdırma yazılacaq.
+`unresolved` hal **avtomatik həll olunur**: açıq `order_id` olan hesablaşma
+üçün `settle-commission` ikinci dəfə autoPay çağırmır, `GET /orders/{orderId}`
+ilə nəticəni soruşur. Yalnız qəti cavab (`PAID`/`APPROVED` və ya
+`FAILED`/`DECLINED`) hesablaşmanı bağlayır; hələ emaldadırsa və ya tanınmayan
+dəyər gəlirsə, sətir açıq qalır və usta bloklanmır.
+
+Üçüncü bir yoxlama da var: ödəniş "paid" görünsə belə, məbləğ gözlənilən
+məbləğlə üst-üstə düşmürsə (məsələn qismən tutulma), hesablaşma bağlanmır və
+log-a `AMOUNT MISMATCH` yazılır. Səhv məbləğə görə borcu bağlamaq, borcu
+bağlamamaqdan pisdir.
+
+**Diqqət — üçüncü lüğət.** Enum Reference `PaymentStatus`-u
+`APPROVED`/`DECLINED` kimi sadalayır, Order Information isə `PAID`/`PENDING`/
+`FAILED` qaytarır — bu dəyərlər həmin enum-da ümumiyyətlə yoxdur. Payriff-in
+öz sənədləri bir-biri ilə ziddiyyət təşkil edir, ona görə `classifyPaymentStatus`
+hər iki dəsti qəbul edir və tanımadığı dəyəri **uğursuz yox, `unresolved`**
+sayır.
 
 ### Bank mətninin tərcüməsi
 

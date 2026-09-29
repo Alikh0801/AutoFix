@@ -92,7 +92,7 @@ export function EarningsScreen() {
         // could take it twice.
         Alert.alert(
           'Ödəniş yoxlanılır',
-          'Bank hələ cavab verməyib. Nəticə bilinənə qədər təkrar tutulma olmayacaq — bir azdan bu səhifəni yenilə.'
+          'Bank hələ son cavabı verməyib. Nəticə bilinənə qədər təkrar tutulma olmayacaq — bir azdan yenidən yoxla.'
         );
       } else if (res.settled) {
         const fromCard = res.fromCard ?? 0;
@@ -183,17 +183,24 @@ export function EarningsScreen() {
             comes first even when the account is still blocked from the
             previous attempt: the only useful instruction then is to wait. */}
         {awaitingResult ? (
-          <View style={styles.infoBanner}>
+          // Tapping re-asks Payriff about the outstanding order; it never
+          // starts a second charge.
+          <Pressable style={styles.infoBanner} onPress={runSettlement} disabled={paying}>
             <View style={styles.infoIcon}>
               <Feather name="loader" size={16} color={colors.textDim} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Ödəniş yoxlanılır</Text>
               <Text style={styles.debtSub}>
-                Bank hələ cavab verməyib. Təkrar tutulma olmayacaq.
+                Nəticəni öyrənmək üçün toxun. Təkrar tutulma olmayacaq.
               </Text>
             </View>
-          </View>
+            {paying ? (
+              <ActivityIndicator color={colors.amber} />
+            ) : (
+              <Feather name="refresh-cw" size={15} color={colors.textDim} />
+            )}
+          </Pressable>
         ) : isBlocked ? (
           <Pressable style={styles.debtBanner} onPress={handleBlockedRetry} disabled={paying}>
             <View style={styles.debtIcon}>

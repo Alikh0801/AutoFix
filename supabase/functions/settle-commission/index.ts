@@ -10,7 +10,12 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
-import { chargeSavedCard, PayriffError } from '../_shared/payriff.ts';
+import {
+  chargeSavedCard,
+  classifyPaymentStatus,
+  getOrder,
+  PayriffError,
+} from '../_shared/payriff.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -50,19 +55,12 @@ Deno.serve(async (req) => {
   const row: BeginRow | undefined = (data ?? [])[0];
   if (!row) return json({ settled: false, error: 'Nothing to settle' });
 
-  // An earlier attempt already reached Payriff and we never learned the
-  // result. Charging again could take the money twice, and no idempotency key
-  // is available to make that safe, so this waits instead.
+  // An earlier attempt reached Payriff and we never learned the result. Ask
+  // them what happened rather than charging again — a second autoPay could
+  // take the money twice, and no idempotency key is available to make that
+  // safe.
   if (row.pending_order_id) {
-    console.warn('settlement awaiting result — refusing to charge again', {
-      settlementId: row.settlement_id,
-      orderId: row.pending_order_id,
-    });
-    return json({
-      settled: false,
-      awaitingResult: true,
-      error: 'Previous charge is still awaiting a result',
-    });
+    return await reconcile(row, row.pending_order_id);
   }
 
   // The balance covered it all — no card involved.
@@ -124,6 +122,65 @@ Deno.serve(async (req) => {
     outcome.reason ?? null
   );
 });
+
+/**
+ * Decides an attempt whose result we never saw, by asking Payriff about the
+ * order it created.
+ *
+ * Only a definite answer closes the settlement. If Payriff still says the
+ * payment is in progress — or says something we do not recognise — the row
+ * stays open and the provider stays unblocked, because the alternative is
+ * acting on a guess about money.
+ */
+async function reconcile(row: BeginRow, orderId: string): Promise<Response> {
+  let order;
+  try {
+    order = await getOrder(orderId);
+  } catch (e) {
+    const detail = e instanceof PayriffError ? e.message : String(e);
+    console.error('order lookup failed', { settlementId: row.settlement_id, orderId, detail });
+    return json({ settled: false, awaitingResult: true });
+  }
+
+  let verdict = classifyPaymentStatus(order.paymentStatus);
+
+  // A paid order for the wrong amount is not this settlement being paid. Most
+  // likely a partial capture; either way it needs a human, not a cleared debt.
+  const expected = Number(row.from_card);
+  if (verdict === 'paid' && Math.abs(Number(order.amount) - expected) > 0.009) {
+    console.error('AMOUNT MISMATCH on reconcile', {
+      settlementId: row.settlement_id,
+      orderId,
+      expected,
+      actual: order.amount,
+    });
+    verdict = 'unresolved';
+  }
+
+  if (verdict === 'unresolved') {
+    console.warn('order still unresolved', {
+      settlementId: row.settlement_id,
+      orderId,
+      paymentStatus: order.paymentStatus,
+    });
+    return json({ settled: false, awaitingResult: true, gatewayStatus: order.paymentStatus });
+  }
+
+  console.info('settlement reconciled', {
+    settlementId: row.settlement_id,
+    orderId,
+    verdict,
+    paymentStatus: order.paymentStatus,
+  });
+
+  return await finish(
+    row,
+    verdict === 'paid',
+    orderId,
+    order.paymentStatus,
+    verdict === 'paid' ? null : 'Ödəniş baş tutmadı'
+  );
+}
 
 /** Commits or fails the reserved settlement. Service role, because this is the
  *  call that forgives debt. */

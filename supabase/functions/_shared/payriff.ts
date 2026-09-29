@@ -197,6 +197,38 @@ export async function deleteSavedCard(cardUuid: string): Promise<void> {
   await call<null>(`/cards/${encodeURIComponent(cardUuid)}`, 'DELETE');
 }
 
+// --- Order lookup -----------------------------------------------------------
+
+export interface OrderInfo {
+  orderId: string;
+  amount: number;
+  paymentStatus: string;
+  currencyType?: string;
+  operationType?: string;
+  /** True when the order came from a saved-card charge rather than a page. */
+  auto?: boolean;
+  createdDate?: string;
+  transactions?: {
+    uuid?: string;
+    status?: string;
+    createdDate?: string;
+    responseRrn?: string;
+    cardDetails?: { maskedPan?: string; brand?: string };
+  }[];
+}
+
+/**
+ * Asks Payriff what actually happened to an order.
+ *
+ * This is the answer to the one case the charge call cannot settle by itself:
+ * the request reached Payriff, money may have moved, and the reply never came
+ * back to us. Without it the only options were to block a provider who may
+ * have paid, or to charge a card that may already have been charged.
+ */
+export function getOrder(orderId: string): Promise<OrderInfo> {
+  return call<OrderInfo>(`/orders/${encodeURIComponent(orderId)}`, 'GET');
+}
+
 /** The card is chargeable only in this one state. */
 export function isCardReady(status: CardSaveStatus): boolean {
   return status === 'REVERSED';
@@ -272,10 +304,36 @@ export interface ChargeOutcome {
  * hyphenated PREAUTH-APPROVED belongs to the separate gateway-values table and
  * never appears in this field.
  */
-const PAID_STATUSES = new Set(['APPROVED']);
+ * TWO VOCABULARIES AGAIN
+ * The Enum Reference says PaymentStatus is APPROVED / DECLINED / …, but the
+ * Order Information endpoint documents and returns PAID / PENDING / FAILED —
+ * values that appear nowhere in that enum. Payriff's own docs disagree, so
+ * both sets are accepted rather than betting on which page is current.
+ */
+const PAID_STATUSES = new Set(['APPROVED', 'PAID']);
 
 /** Refused outright, with certainty that no money moved. */
-const FAILED_STATUSES = new Set(['DECLINED', 'CANCELED', 'EXPIRED', 'PREAUTH_EXPIRED']);
+const FAILED_STATUSES = new Set([
+  'DECLINED',
+  'CANCELED',
+  'EXPIRED',
+  'PREAUTH_EXPIRED',
+  'FAILED',
+]);
+
+/**
+ * The one place a payment status becomes a decision.
+ *
+ * Anything unrecognised is 'unresolved', never a failure: an unknown value is
+ * ignorance, and treating ignorance as a decline blocks providers and invites
+ * a second charge.
+ */
+export function classifyPaymentStatus(status: string | null | undefined): ChargeResult {
+  const s = (status ?? '').trim();
+  if (PAID_STATUSES.has(s)) return 'paid';
+  if (FAILED_STATUSES.has(s)) return 'failed';
+  return 'unresolved';
+}
 
 export async function chargeSavedCard(input: {
   cardUuid: string;
@@ -300,16 +358,10 @@ export async function chargeSavedCard(input: {
   const status = (payload.paymentStatus ?? '').trim();
   const inner = payload.transactionResponseDto?.transactionResult?.transactionResponse;
 
-  let result: ChargeResult;
-  if (PAID_STATUSES.has(status)) {
-    result = 'paid';
-  } else if (FAILED_STATUSES.has(status)) {
-    result = 'failed';
-  } else if (!status && isGatewayApproved(inner?.status)) {
+  let result = classifyPaymentStatus(status);
+  if (result === 'unresolved' && !status && isGatewayApproved(inner?.status)) {
     // No lifecycle status at all, but the bank said yes. The money moved.
     result = 'paid';
-  } else {
-    result = 'unresolved';
   }
 
   if (result !== 'paid') {
