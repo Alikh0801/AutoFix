@@ -215,9 +215,16 @@ Create Order səhifəsi bunu birbaşa təsdiqləyir: **«PURCHASE charges
 immediately; PRE_AUTH only reserves funds.»** Yəni preavtorizasiyanı uğur
 saymaq pulun tutulduğunu iddia etmək olardı, halbuki o yalnız bloklanıb.
 
-`unresolved` hal **avtomatik həll olunur**: açıq `order_id` olan hesablaşma
-üçün `settle-commission` ikinci dəfə autoPay çağırmır, `GET /orders/{orderId}`
-ilə nəticəni soruşur. Yalnız qəti cavab (`PAID`/`APPROVED` və ya
+`unresolved` hal **iki yoldan avtomatik həll olunur**, hər ikisi eyni məntiqi
+(`_shared/settlement.ts`) işlədir:
+
+1. **`payriff-payment-callback`** — Payriff ödəniş bitəndə çağırır, usta heç
+   nəyə toxunmadan hesablaşma bağlanır.
+2. **Usta «yenidən yoxla»ya toxunanda** — callback gəlməsə və ya itsə, bu
+   ehtiyat yoldur.
+
+Hər ikisində açıq `order_id` olan hesablaşma üçün ikinci dəfə autoPay
+çağırılmır, `GET /orders/{orderId}` ilə nəticə soruşulur. Yalnız qəti cavab (`PAID`/`APPROVED` və ya
 `FAILED`/`DECLINED`) hesablaşmanı bağlayır; hələ emaldadırsa və ya tanınmayan
 dəyər gəlirsə, sətir açıq qalır və usta bloklanmır.
 
