@@ -304,6 +304,8 @@ export interface ChargeOutcome {
  * hyphenated PREAUTH-APPROVED belongs to the separate gateway-values table and
  * never appears in this field.
  */
+
+/*
  * TWO VOCABULARIES AGAIN
  * The Enum Reference says PaymentStatus is APPROVED / DECLINED / …, but the
  * Order Information endpoint documents and returns PAID / PENDING / FAILED —
