@@ -71,7 +71,15 @@ export class PayriffError extends Error {
   }
 }
 
-async function call<T>(path: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+async function call<T>(
+  path: string,
+  method: 'GET' | 'POST' | 'DELETE',
+  body?: unknown,
+  // Deleting a card answers with an empty payload on success. Everywhere else
+  // an empty payload means the call did not do the thing it reports having
+  // done, so it must not be handed back as if it had.
+  allowEmptyPayload = false,
+): Promise<T> {
   if (!SECRET_KEY) throw new PayriffError('PAYRIFF_SECRET_KEY is not set on this project');
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -98,11 +106,26 @@ async function call<T>(path: string, method: 'GET' | 'POST' | 'DELETE', body?: u
       json.code
     );
   }
-  // 01000 still returns a payload, so the call goes on — but a warning we never
-  // look at is a warning that only surfaces once it has cost something.
+  // A warning we never look at is a warning that only surfaces once it has
+  // cost something.
   if (json.code === '01000') {
     console.warn('Payriff WARNING', { path, message: json.message, internal: json.internalMessage });
   }
+
+  // 01000 was assumed to always carry a payload. It does not: an account with
+  // card saving switched off answers /cards/save with 01000, the explanation
+  // in `message`, and nothing else. The caller then read cardSaveId off
+  // undefined and died, which turned "Autopay is not enabled for this merchant
+  // account" into an unreadable 500 — the one line that would have explained
+  // everything, thrown away at the last step. A success code with no payload
+  // is not a success, so say what Payriff said.
+  if (!allowEmptyPayload && (json.payload === undefined || json.payload === null)) {
+    throw new PayriffError(
+      json.internalMessage || json.message || describeResultCode(json.code),
+      json.code,
+    );
+  }
+
   return json.payload;
 }
 
@@ -194,7 +217,9 @@ export function listSavedCards(customerRef: string): Promise<SavedCard[]> {
 
 /** Irreversible: the token cannot be used for AutoPay afterwards. */
 export async function deleteSavedCard(cardUuid: string): Promise<void> {
-  await call<null>(`/cards/${encodeURIComponent(cardUuid)}`, 'DELETE');
+  // Success here is the absence of a payload, so the empty-payload guard has
+  // to stand down for this one call.
+  await call<null>(`/cards/${encodeURIComponent(cardUuid)}`, 'DELETE', undefined, true);
 }
 
 // --- Order lookup -----------------------------------------------------------
