@@ -111,16 +111,33 @@ const RULES: { match: RegExp; message: string }[] = [
   { match: /violates foreign key/i, message: 'Bu məlumat başqa qeydlərdə istifadə olunur, silinə bilmir.' },
 ];
 
+/**
+ * An error whose message one of our own Edge Functions chose to send back —
+ * a payment gateway's explanation, say, rather than whatever the database
+ * happened to say. Those are worth showing as they are.
+ */
+export class ServiceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServiceError';
+  }
+}
+
 /** Azerbaijani message for a backend error, with a safe generic fallback.
- *  Anything unrecognised is NOT echoed to the user: raw Postgres text is
- *  noise at best and leaks schema details at worst. */
+ *
+ *  An unrecognised message is normally NOT echoed: raw Postgres text is noise
+ *  at best and leaks schema details at worst. A ServiceError is the exception,
+ *  because it carries what an Edge Function deliberately handed back. Swapping
+ *  it for "Xəta baş verdi" cost a whole debugging round once already —
+ *  Payriff's "Autopay is not enabled for this merchant account" was replaced
+ *  by a shrug, and the reason had to be dug out of the dashboard logs. */
 export function errorMessage(e: unknown, fallback = 'Xəta baş verdi. Yenidən cəhd et.'): string {
   const raw = typeof e === 'string' ? e : (e as any)?.message;
   if (!raw) return fallback;
   for (const rule of RULES) {
     if (rule.match.test(raw)) return rule.message;
   }
-  return fallback;
+  return e instanceof ServiceError ? raw : fallback;
 }
 
 // --- Payriff / bank wording -------------------------------------------------

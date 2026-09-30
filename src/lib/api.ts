@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { ServiceError } from './errors';
 import { ServiceCategory, ServiceCategoryId } from '../data/mock';
 
 export type RequestStatus =
@@ -508,7 +509,7 @@ export async function settleCommission(): Promise<SettlementResult> {
   const { data, error } = await supabase.functions.invoke('settle-commission', { body: {} });
   if (error) {
     const detail = await readFunctionError(error);
-    throw new Error(detail ?? error.message);
+    throw detail ? new ServiceError(detail) : new Error(error.message);
   }
   return data as SettlementResult;
 }
@@ -528,7 +529,7 @@ async function invoke<T>(name: string, body: Record<string, unknown> = {}): Prom
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     const detail = await readFunctionError(error);
-    throw new Error(detail ?? error.message);
+    throw detail ? new ServiceError(detail) : new Error(error.message);
   }
   return data as T;
 }
