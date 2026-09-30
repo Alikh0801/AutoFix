@@ -172,7 +172,8 @@ export function CardsScreen({ navigation }: Props) {
           <View style={styles.empty}>
             <Feather name="credit-card" size={26} color={colors.textFaint} />
             <Text style={styles.emptyText}>
-              Komissiya bu kartdan tutulur. İşə başlamaq üçün bir kart əlavə et.
+              Komissiya bu kartdan tutulur. İlk 3 sifarişi kartsız götürə bilərsən — kart
+              komissiyanı ödəmək vaxtı gələndə lazım olur.
             </Text>
           </View>
         ) : (
