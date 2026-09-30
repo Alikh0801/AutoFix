@@ -40,9 +40,19 @@ supabase login
 supabase secrets set PAYRIFF_SECRET_KEY=<merchant secret key> --project-ref <REF>
 ```
 
+> ⚠️ **Hansı açarı qoyduğunu yoxla.** Payriff ayrıca sandbox açarı vermir:
+> mühiti Application-ın statusu müəyyən edir. Payriff hesabı → **Applications**
+> bölməsində `Development` statuslu Application-ın Secret Key-i test
+> ödənişləri üçündür. `Production` statuslu Application-ın açarı ilə
+> **hər əməliyyat realdır** — test kartı sadəcə rədd olunar, amma real kartla
+> real pul gedər. Test mərhələsində Development açarı olmalıdır.
+>
+> Canlıya çıxanda tək dəyişiklik budur: `PAYRIFF_SECRET_KEY`-i Production
+> Application-ın açarı ilə əvəz et və funksiyaları yenidən deploy et. Kod,
+> URL və konfiqurasiya dəyişmir.
+
 - `PAYRIFF_BASE_URL` **qoyma.** Kodda düzgün default var
-  (`https://api.payriff.com/api/v3`). Payriff sandbox üçün ayrıca URL verməyib;
-  ehtimal ki mühiti açarın özü müəyyən edir.
+  (`https://api.payriff.com/api/v3`). Hər iki mühit eyni URL-dən işləyir.
 - `PAYRIFF_MERCHANT_ID` **qoyma.** Payriff tələb etdiyini deyənə qədər lazım
   deyil; qoyulmasa sorğuya heç göndərilmir.
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` avtomatik
@@ -122,12 +132,10 @@ Cavab gələndə `docs/PAYMENTS.md` → «Açıq suallar» bölməsi yenilənmə
 4. Saxlanmış kartın müddəti bitəndə nə olur?
 5. autoPay-də `merchant` parametri məcburidirmi? *(Create Order-də belə bir
    parametr yoxdur — gözlənilən cavab «lazım deyil»)*
-6. Sandbox üçün ayrıca base URL varmı? *(Create Order-in `paymentUrl`-i
-   `sbpay.payriff.com`-a işarə edir, yəni API hostu eyni qalır)*
-7. `PaymentStatus` enum-u ilə Order Information-un `PAID/PENDING/FAILED`
+6. `PaymentStatus` enum-u ilə Order Information-un `PAID/PENDING/FAILED`
    dəyərləri niyə uyğun gəlmir?
-8. Əməliyyat başına minimum haqq və minimum məbləğ?
-9. Vəsaitin hesaba oturma müddəti, payout tələbləri?
+7. Əməliyyat başına minimum haqq və minimum məbləğ?
+8. Vəsaitin hesaba oturma müddəti, payout tələbləri?
 
 Cavab gəlməyincə **bu sahələrdə kod dəyişmə** — hazırkı davranış bilərəkdən
 ehtiyatlıdır və səbəbləri `docs/PAYMENTS.md`-də yazılıb.
