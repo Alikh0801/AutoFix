@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFix — Yolda qalma</title>
+<meta name="description" content="Yolda avtomobili xarab olan sürücünü ən yaxın seyyar usta ilə birləşdirən mobil xidmət. Akkumulyator, təkər, yanacaq, açar qalması və diaqnostika.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1116; --surface:#171B22; --surface2:#1F242D; --line:#2A3038;
+    --amber:#FFB627; --amber-soft:rgba(255,182,39,.14); --amber-dim:#B8811C;
+    --cream:#F5F3EE; --dim:#93A0AC; --faint:#5B6570; --success:#3DD68C;
+    --head:'Space Grotesk',system-ui,sans-serif;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--cream);
+    font-family:var(--body);font-size:16px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
+  a{color:var(--amber);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{padding:28px 0 8px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand svg{flex:none}
+  .brand-name{font-family:var(--head);font-weight:700;font-size:21px;letter-spacing:-.01em}
+
+  .hero{padding:44px 0 40px;border-bottom:1px solid var(--line)}
+  .hero h1{
+    font-family:var(--head);font-weight:700;font-size:clamp(30px,6vw,46px);
+    line-height:1.12;letter-spacing:-.02em;margin:0 0 16px;
+  }
+  .hero h1 em{color:var(--amber);font-style:normal}
+  .lede{font-size:clamp(16px,2.4vw,18.5px);color:var(--dim);max-width:60ch;margin:0}
+  .pill{
+    display:inline-block;margin-bottom:20px;padding:6px 13px;border-radius:999px;
+    background:var(--amber-soft);border:1px solid var(--amber-dim);
+    color:var(--amber);font-size:12.5px;font-weight:500;letter-spacing:.02em;
+  }
+
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  h2{font-family:var(--head);font-weight:600;font-size:clamp(21px,3.4vw,26px);letter-spacing:-.01em;margin:0 0 8px}
+  h3{font-family:var(--head);font-weight:600;font-size:16.5px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 26px;max-width:62ch}
+  p{margin:0 0 14px}
+
+  .steps{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .step-n{
+    width:28px;height:28px;border-radius:9px;background:var(--amber-soft);
+    color:var(--amber);font-family:var(--head);font-weight:600;font-size:13.5px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+  }
+  .step p{color:var(--dim);font-size:14.5px;margin:0}
+
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--faint);font-weight:500;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
+  td:last-child,th:last-child{text-align:right;white-space:nowrap}
+  .price{font-variant-numeric:tabular-nums;color:var(--amber);font-weight:500}
+
+  .note{
+    background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:12px;padding:16px 18px;color:var(--dim);font-size:14.5px;margin:20px 0 0;
+  }
+  .note strong{color:var(--cream);font-weight:600}
+
+  .cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:6px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .card p{color:var(--dim);font-size:14.5px;margin:0}
+
+  dl{margin:0}
+  dt{font-family:var(--head);font-weight:600;font-size:15.5px;margin:22px 0 4px}
+  dt:first-child{margin-top:0}
+  dd{margin:0;color:var(--dim);font-size:15px}
+
+  .contact a{font-weight:500}
+  footer{padding:32px 0 48px;color:var(--faint);font-size:13.5px}
+  footer p{margin:0 0 6px}
+
+  ul{margin:0 0 14px;padding-left:20px;color:var(--dim)}
+  li{margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 200 200" aria-hidden="true">
+        <polygon points="118,18 54,106 90,106 74,182 152,88 106,88" fill="#FFB627"/>
+        <polygon points="106,96 101,87.5 91,87.5 86,96 91,104.5 101,104.5" fill="#0E1116"/>
+      </svg>
+      <span class="brand-name">AutoFix</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <span class="pill">Azərbaycan · mobil tətbiq</span>
+    <h1>Yolda qaldın?<br><em>Ən yaxın usta yanına gəlir.</em></h1>
+    <p class="lede">
+      AutoFix avtomobili yolda xarab olan sürücünü yaxınlıqdakı seyyar ustalarla
+      birləşdirir. Sürücü problemi seçir, ustalar qiymət təklif edir, sürücü
+      özünə uyğun olanı seçir və ustanın hərəkətini xəritədə canlı izləyir.
+    </p>
+  </div>
+
+  <section id="nece-isleyir">
+    <h2>Necə işləyir</h2>
+    <p class="sub">Dörd addım, orta hesabla bir neçə dəqiqə.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <h3>Problemi seç</h3>
+        <p>Akkumulyator, təkər, yanacaq, açar maşında qalıb, diaqnostika və ya başqa nasazlıq.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <h3>Təklifləri gözlə</h3>
+        <p>Yaxınlıqdakı ustalar qiymət təklif edir. Hər təklifdə ustanın reytinqi və məsafəsi görünür.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <h3>Ustanı seç</h3>
+        <p>Qiyməti və reytinqi qarşılaşdır, birini seç. Usta yola çıxır, yerini xəritədə izləyirsən.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">4</div>
+        <h3>Ödə və qiymətləndir</h3>
+        <p>İş bitəndə razılaşdırılmış məbləği ödəyirsən və ustanı qiymətləndirirsən.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="xidmetler">
+    <h2>Xidmətlər və qiymətlər</h2>
+    <p class="sub">
+      Qiymət ustanın təklifi ilə formalaşır — aşağıdakılar minimum hədlərdir.
+      Son qiymət sifarişi təsdiqləməzdən əvvəl sürücüyə göstərilir və sonradan dəyişmir.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Xidmət</th><th>Nə edilir</th><th>Başlanğıc</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Akkumulyator</td><td>Cərəyan verilməsi, işə salma</td><td class="price">5 AZN-dən</td></tr>
+        <tr><td>Təkər</td><td>Hava, dəyişmə, deşiyin yamanması</td><td class="price">5 AZN-dən</td></tr>
+        <tr><td>Yanacaq</td><td>Benzin və ya dizel çatdırılması</td><td class="price">10 AZN-dən</td></tr>
+        <tr><td>Açar maşında qalıb</td><td>Qapının açılması</td><td class="price">5 AZN-dən</td></tr>
+        <tr><td>Diaqnostika</td><td>Nasazlığın yerində yoxlanması</td><td class="price">10 AZN-dən</td></tr>
+        <tr><td>Digər</td><td>Sürücünün təsvir etdiyi problem</td><td class="price">təklifə görə</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="odenis">
+    <h2>Ödəniş</h2>
+    <p class="sub">Kim kimə nə ödəyir — açıq şəkildə.</p>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Sürücü → usta</h3>
+        <p>
+          Xidmət haqqı ustaya ödənilir. <strong style="color:var(--cream)">Hazırda yalnız nağd.</strong>
+          Tətbiqdə kartla ödəniş hazırlanır və hazır olanda aktivləşdiriləcək.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Usta → AutoFix</h3>
+        <p>
+          AutoFix hər tamamlanmış işdən komissiya alır. Komissiya ustanın
+          tətbiqə bağladığı kartdan avtomatik tutulur — sürücüdən əlavə heç nə alınmır.
+        </p>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Sürücü üçün əlavə haqq yoxdur.</strong>
+      Sürücü yalnız usta ilə razılaşdırılmış məbləği ödəyir. Xidmət haqqı,
+      çağırış haqqı və ya abunə yoxdur.
+    </div>
+  </section>
+
+  <section id="usta">
+    <h2>Usta kimi qoşulmaq</h2>
+    <p class="sub">
+      Seyyar ustalar tətbiqdə qeydiyyatdan keçib öz bölgələrindəki sifarişlərə təklif verə bilər.
+    </p>
+    <ul>
+      <li>Qeydiyyat pulsuzdur, aylıq abunə yoxdur</li>
+      <li>Hansı xidmətləri göstərdiyini özün seçirsən</li>
+      <li>Hər sifarişə öz qiymətini təklif edirsən — məcburi tarif yoxdur</li>
+      <li>Komissiya yalnız tamamlanmış işlərdən alınır və hər üç işdən sonra bir dəfə tutulur</li>
+      <li>Komissiyanın tutulması üçün bir dəfə kart bağlamaq tələb olunur</li>
+    </ul>
+    <div class="note">
+      Kart bağlanarkən kartın işlək olduğunu yoxlamaq üçün <strong>0.01 AZN</strong>
+      tutulur və dərhal geri qaytarılır. Kart məlumatları bankın səhifəsində
+      daxil edilir və AutoFix-ə ötürülmür.
+    </div>
+  </section>
+
+  <section id="qaydalar">
+    <h2>Şərtlər</h2>
+    <dl>
+      <dt>Sifarişin ləğvi</dt>
+      <dd>
+        Usta seçilənə qədər sifariş pulsuz ləğv edilə bilər. Usta yola çıxandan
+        sonra ləğv etmək istəsən, tətbiq daxilindən usta ilə əlaqə saxla.
+      </dd>
+
+      <dt>Geri qaytarma</dt>
+      <dd>
+        Ödəniş nağd olduğu üçün mübahisə hazırda sürücü və usta arasında,
+        AutoFix dəstəyinin iştirakı ilə həll olunur. Kartla ödəniş
+        aktivləşdiriləndə geri qaytarma tətbiq daxilindən mümkün olacaq.
+      </dd>
+
+      <dt>Xidmətin keyfiyyəti</dt>
+      <dd>
+        Ustalar müstəqil xidmət göstərənlərdir. Hər işdən sonra iki tərəfli
+        qiymətləndirmə aparılır; reytinqi aşağı düşən ustalar platformadan
+        çıxarılır.
+      </dd>
+
+      <dt>Məxfilik</dt>
+      <dd>
+        Ad, telefon nömrəsi, e-poçt və sifariş zamanı yerin toplanır — bunlar
+        yalnız xidmətin göstərilməsi üçün istifadə olunur. Yer məlumatı yalnız
+        aktiv sifariş zamanı və yalnız seçilmiş ustaya göstərilir. Kart
+        məlumatları serverlərimizdə saxlanılmır; ödənişlər lisenziyalı ödəniş
+        provayderi vasitəsilə emal olunur.
+      </dd>
+
+      <dt>Yaş həddi</dt>
+      <dd>Tətbiqdən 18 yaşdan yuxarı istifadəçilər istifadə edə bilər.</dd>
+    </dl>
+  </section>
+
+  <footer>
+    <p>© <span id="y">2026</span> AutoFix. Bütün hüquqlar qorunur.</p>
+  </footer>
+
+</div>
+
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>

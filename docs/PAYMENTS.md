@@ -346,13 +346,18 @@ acquiring xərcini iş-iş hesablaya bilmirik. Bu qərar dəyişməyincə lazım
 - **Minimum əməliyyat haqqı və minimum məbləğ.** Faizlər məlumdur, amma
   əməliyyat başına döşəmə haqq varmı və autoPay-in minimum məbləği nədir —
   hər ikisi 3 iş qaydasına təsir edir.
-- **Sandbox base URL.** Authorization səhifəsi yalnız bir base URL verir
-  (`https://api.payriff.com/api/v3`). Create Order-in cavab nümunəsindəki
-  `paymentUrl` isə **`sbpay.payriff.com`**-a işarə edir — yəni sandbox
-  ödəniş səhifəsinin hostu ayrıdır, API hostu isə eynidir. Bu, mühiti
-  **açarın müəyyən etdiyi** və düzgün `paymentUrl`-in cavabda qaytarıldığı
-  fikrini gücləndirir. Formal təsdiq qalır, amma praktikada
-  `PAYRIFF_BASE_URL` **qoyulmamalıdır**.
+- ~~**Sandbox base URL.**~~ **Cavablandı (2026-09-30).** Ayrıca sandbox açarı
+  və ya URL yoxdur. Mühiti **Application-ın statusu** müəyyən edir: Payriff
+  hesabındakı `Development` statuslu Application-ın Secret Key-i test
+  ödənişləri üçün işləyir, `Production` statuslu Application-ın açarı isə real
+  pul hərəkət etdirir. Base URL hər iki halda eynidir, ona görə
+  `PAYRIFF_BASE_URL` **qoyulmur**.
+
+  Nəticəsi: mühiti dəyişmək kod və ya konfiqurasiya dəyişikliyi deyil —
+  **secret-i dəyişməkdir**. Canlıya çıxanda `PAYRIFF_SECRET_KEY` Production
+  Application-ın açarı ilə əvəz olunmalıdır. Əksi də doğrudur və daha
+  təhlükəlidir: test zamanı səhvən Production açarı qoyulsa, «test» ödənişləri
+  real olur.
 - **`REVERSE_FAILED`.** Kart təsdiqlənib, amma 0.01 AZN geri qaytarılmayıb. Bu
   kart AutoPay üçün yararlıdırmı? Hazırda **yararsız** sayırıq — yalnız
   `REVERSED` işlək kart hesab olunur. Bu, ehtiyatlı seçimdir: səhv olsa, usta

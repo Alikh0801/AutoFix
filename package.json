@@ -45,7 +45,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:android": "eas build --platform android --profile preview",
-    "update:preview": "eas update --branch preview"
+    "update:preview": "eas update --branch preview",
+    "check:functions": "node scripts/check-functions.mjs"
   },
   "private": true
 }
