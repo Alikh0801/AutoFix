@@ -10,9 +10,9 @@ inanacaq.
 |---|---|
 | Migrationlar `0031`–`0035` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
 | Kod `main`-də | ✅ |
-| Edge Function deploy | ⏳ edilməyib (7 funksiya) |
-| `PAYRIFF_SECRET_KEY` secret | ⏳ qoyulmayıb |
-| Android build (kart axını ilə) | ⏳ yığılmayıb |
+| Edge Function deploy | ✅ 7 funksiya |
+| `PAYRIFF_SECRET_KEY` secret | ✅ |
+| Android build (kart axını ilə) | ✅ |
 | Canlı test | ⏳ |
 
 ## ⚠️ Migrationlar barədə
@@ -64,6 +64,18 @@ Son iki əmrdəki `--no-verify-jwt` **mütləqdir**: Payriff callback göndərə
 JWT-si olmur, o bayraq olmasa callback 401 alıb çatmaz. Təhlükəsizlik itkisi
 yoxdur — callback-ə onsuz da inanmırıq, statusu həmişə Payriff API-sindən
 yenidən oxuyuruq (bax `docs/PAYMENTS.md` → Etibar modeli).
+
+### Edge Function-ları dəyişəndə
+
+```bash
+npm run check:functions
+```
+
+Bunu **deploy-dan əvvəl** işlət. Funksiyalar Deno-dur və `tsconfig.json`-dan
+kənardadır, yəni `tsc --noEmit` onlara ümumiyyətlə baxmır. Bir dəfə
+bağlanmamış şərh bloku repo-ya düşdü və yeddi funksiyanın **hamısının** deploy
+olunmasını dayandırdı — hər biri `_shared/payriff.ts`-i import edir, ona görə
+bir parse xətası hamısını bloklayır. Bu skript məhz həmin sinif səhvi tutur.
 
 ### 3. Tətbiq
 
