@@ -8,19 +8,33 @@ Bu səhifə məhz həmin sualları cavablandırır.
 Tək fayldır (`index.html`), xarici asılılığı yoxdur (yalnız Google Fonts), ona
 görə istənilən statik hostinqdə işləyir.
 
-## ⚠️ Yayımlamazdan əvvəl doldur
+## ⚠️ Əlaqə bölməsi hələ yoxdur
 
-Səhifədə qəsdən boş qoyulmuş yerlər var — uydurmaq olmaz, sən doldurmalısan:
+Dəstək e-poçtu, telefon, ünvan, hüquqi ad və VÖEN hazır olmadığı üçün
+**çıxarılıb** — yarımçıq və ya uydurma məlumat göstərməkdənsə heç nə
+göstərmək yaxşıdır.
 
-| Yer | Nə yazılmalı |
-|---|---|
-| `ELAQE@DOMEN.AZ` | real dəstək e-poçtu |
-| `+994 XX XXX XX XX` | real əlaqə nömrəsi |
-| `ŞİRKƏTİN ÜNVANI` | qeydiyyat ünvanı |
-| `ŞİRKƏTİN RƏSMİ ADI` · `VÖEN` | hüquqi ad və VÖEN |
+Amma bu, müvəqqəti olmalıdır. Acquirer üçün əlaqə və hüquqi rekvizitlər
+adi bir detal deyil: şikayət və chargeback zamanı müştərinin kiminlə
+danışacağını onlar bilmək istəyir. Müraciət qəbul olunduqdan sonra
+soruşulacağını gözlə.
 
-Acquirer bu dördünə xüsusi baxır. Boş və ya uydurma məlumatla müraciət
-adətən geri qaytarılır.
+Hazır olanda bu bölməni geri qaytar:
+
+```html
+<section id="elaqe" class="contact">
+  <h2>Əlaqə</h2>
+  <p class="sub">Sual, şikayət və ya əməkdaşlıq üçün:</p>
+  <p>
+    E-poçt: <a href="mailto:...">...</a><br>
+    Telefon: <a href="tel:+994...">+994 ...</a><br>
+    Ünvan: ...
+  </p>
+</section>
+```
+
+və footer-ə hüquqi adı və VÖEN-i əlavə et. `.contact` CSS sinfi faylda
+saxlanılıb, silinməyib.
 
 ## Yayımlamaq
 
