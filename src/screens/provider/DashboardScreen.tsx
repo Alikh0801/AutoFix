@@ -8,6 +8,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
+import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LiveMap, LiveMapMarker } from '../../components/LiveMap';
 import { RatingStars } from '../../components/RatingStars';
@@ -64,6 +66,7 @@ export function DashboardScreen({ navigation }: Props) {
   const [checkingActive, setCheckingActive] = useState(true);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<ProviderState | null>(null);
+  const [explainOnline, setExplainOnline] = useState(false);
   const autoRedirectedRef = useRef<string | null>(null);
 
   // Mirror online status + location to the DB — but only once the stored mode
@@ -192,6 +195,41 @@ export function DashboardScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* What being online actually costs and grants, said plainly — the
+          switch alone does not tell an usta that it is what turns
+          notifications on, or that it stays on after the app is closed. */}
+      <Modal
+        visible={explainOnline}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExplainOnline(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setExplainOnline(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <View style={styles.modalIcon}>
+              <Feather name="bell" size={20} color={colors.amber} />
+            </View>
+
+            <Text style={styles.modalTitle}>Aktiv rejim</Text>
+
+            <Text style={styles.modalBody}>
+              Aktiv rejimdə olduğunuz müddətdə yaxınlığınızda yaranan sifarişlər barədə
+              bildiriş alırsınız.
+            </Text>
+            <Text style={styles.modalBody}>
+              Bildiriş almaq istəmirsinizsə, passiv rejimə keçin. Passiv rejimdə sifarişlər
+              sizə göstərilmir və bildiriş göndərilmir.
+            </Text>
+            <Text style={styles.modalBody}>
+              Aktiv rejim tətbiqi bağladıqdan sonra da qüvvədə qalır — passiv rejimə
+              keçənədək.
+            </Text>
+
+            <Button label="Anladım" onPress={() => setExplainOnline(false)} style={{ marginTop: 6 }} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <SafeAreaView edges={['top']} style={styles.header}>
         <View style={styles.topBar}>
           <View style={{ flexShrink: 1 }}>
@@ -203,6 +241,14 @@ export function DashboardScreen({ navigation }: Props) {
             </Text>
           </View>
           <View style={styles.onlineToggle}>
+            <Pressable
+              onPress={() => setExplainOnline(true)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Aktiv rejim nədir"
+            >
+              <Feather name="help-circle" size={17} color={colors.textDim} />
+            </Pressable>
             <View style={[styles.dot, { backgroundColor: isOnline ? colors.success : colors.textFaint }]} />
             <Switch
               value={isOnline}
@@ -387,6 +433,32 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 14 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 22,
+    padding: 22,
+    gap: 12,
+  },
+  modalIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.amberSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: { ...type.h3 },
+  modalBody: { fontFamily: fonts.body, fontSize: 13.5, color: colors.textDim, lineHeight: 20 },
   activeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
