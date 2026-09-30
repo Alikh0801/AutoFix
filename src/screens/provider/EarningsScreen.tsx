@@ -218,6 +218,27 @@ export function EarningsScreen() {
               <Text style={styles.debtPay}>Həll et</Text>
             )}
           </Pressable>
+        ) : /* Due comes before the card prompt. An usta with no card and a bill
+               outstanding used to see only "add a card" and never the button
+               that settles it — and since 0036 they can bid without one, the
+               card prompt was also telling them something untrue. Paying is
+               the instruction now; handlePayCommission sends them to the card
+               page by itself when there is no card to charge. */
+        isDue ? (
+          <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
+            <View style={styles.debtIcon}>
+              <Feather name="alert-circle" size={16} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.debtTitle}>Komissiya borcu: {owed} AZN</Text>
+              <Text style={styles.debtSub}>
+                {hasCard
+                  ? 'Balansdan, çatmasa kartdan tutulur'
+                  : 'Ödəmək üçün kart əlavə et — yeni sifariş ala bilmirsən'}
+              </Text>
+            </View>
+            {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
+          </Pressable>
         ) : !hasCard ? (
           <Pressable style={styles.warnBanner} onPress={() => navigation.navigate('Cards')}>
             <View style={styles.warnIcon}>
@@ -225,20 +246,11 @@ export function EarningsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Kart əlavə edilməyib</Text>
-              <Text style={styles.debtSub}>Kart olmadan yeni sifarişə təklif verə bilməzsən</Text>
+              <Text style={styles.debtSub}>
+                İlk 3 sifariş kartsız keçir — komissiya vaxtı gələndə kart lazım olacaq
+              </Text>
             </View>
             <Feather name="chevron-right" size={16} color={colors.amber} />
-          </Pressable>
-        ) : isDue ? (
-          <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
-            <View style={styles.debtIcon}>
-              <Feather name="alert-circle" size={16} color={colors.danger} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.debtTitle}>Komissiya borcu: {owed} AZN</Text>
-              <Text style={styles.debtSub}>Balansdan, çatmasa kartdan tutulur</Text>
-            </View>
-            {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
           </Pressable>
         ) : owed > 0 ? (
           <View style={styles.infoBanner}>

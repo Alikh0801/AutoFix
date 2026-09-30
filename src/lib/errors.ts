@@ -82,6 +82,10 @@ const RULES: { match: RegExp; message: string }[] = [
 
   // --- Cards and commission ---
   {
+    match: /commission settlement due/i,
+    message: '3 iş tamamlandı. Yeni sifariş almaq üçün Qazanc bölməsindən komissiya borcunu ödə.',
+  },
+  {
     match: /no usable card/i,
     message: 'Əvvəlcə Profil → Ödəniş kartları bölməsindən kart əlavə et.',
   },
