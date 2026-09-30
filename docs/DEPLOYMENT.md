@@ -1,6 +1,6 @@
 # Deploy vəziyyəti və qalan addımlar
 
-**Son yenilənmə: 2026-09-29.** Bu fayl əl ilə saxlanılır — addım tamamlananda
+**Son yenilənmə: 2026-09-30.** Bu fayl əl ilə saxlanılır — addım tamamlananda
 cədvəli yenilə, yoxsa növbəti dəfə oxuyan (insan və ya agent) səhv vəziyyətə
 inanacaq.
 
@@ -10,10 +10,10 @@ inanacaq.
 |---|---|
 | Migrationlar `0031`–`0035` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
 | Kod `main`-də | ✅ |
-| Edge Function deploy | ⏳ edilməyib (7 funksiya) |
-| `PAYRIFF_SECRET_KEY` secret | ⏳ qoyulmayıb |
-| Android build (kart axını ilə) | ⏳ yığılmayıb |
-| Canlı test | ⏳ |
+| Edge Function deploy | ✅ 7/7 `ACTIVE` (2026-09-29) |
+| `PAYRIFF_SECRET_KEY` secret | ✅ qoyulub (2026-09-30) |
+| Android build (kart axını ilə) | ✅ `54581b4c` (2026-09-29) |
+| Canlı test | ⏳ sandbox açarı ilə başlayır |
 
 ## ⚠️ Migrationlar barədə
 
@@ -31,9 +31,12 @@ ver** ki, Dashboard-dan run etsin. Özün tətbiq etməyə çalışma.
 
 ## Qalan addımlar
 
-Layihə ref-i Dashboard URL-indədir: `.../project/<REF>`.
+**1–3-cü addımlar tamamlanıb** (2026-09-29/30), aşağıda arayış üçün saxlanılır.
+Layihə ref-i: `wvyeoaygnatawcdzqcpx`.
 
-### 1. Secret
+Yeganə qalan iş — aşağıdakı **test ardıcıllığı**.
+
+### 1. Secret ✅
 
 ```bash
 supabase login
@@ -48,7 +51,7 @@ supabase secrets set PAYRIFF_SECRET_KEY=<merchant secret key> --project-ref <REF
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` avtomatik
   gəlir.
 
-### 2. Edge Function-lar
+### 2. Edge Function-lar ✅
 
 ```bash
 supabase functions deploy start-card-save       --project-ref <REF>
@@ -65,7 +68,7 @@ JWT-si olmur, o bayraq olmasa callback 401 alıb çatmaz. Təhlükəsizlik itkis
 yoxdur — callback-ə onsuz da inanmırıq, statusu həmişə Payriff API-sindən
 yenidən oxuyuruq (bax `docs/PAYMENTS.md` → Etibar modeli).
 
-### 3. Tətbiq
+### 3. Tətbiq ✅
 
 ```bash
 npm install          # expo-web-browser yeni native paketdir
