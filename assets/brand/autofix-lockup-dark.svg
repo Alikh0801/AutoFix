@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 200" width="620" height="200">
+  <title>AutoFix</title>
+  <path d="M118,18L54,106L90,106L74,182L152,88L106,88Z M106,96L101,87.5L91,87.5L86,96L91,104.5L101,104.5Z"
+        fill="#FFB627" fill-rule="evenodd"/>
+  <text x="200" y="133" font-family="Space Grotesk, Arial, Helvetica, sans-serif"
+        font-weight="700" font-size="98" letter-spacing="-2.5" fill="#F5F3EE">AutoFix</text>
+</svg>
