@@ -13,7 +13,26 @@ inanacaq.
 | Edge Function deploy | ✅ 7/7 `ACTIVE` (2026-09-29) |
 | `PAYRIFF_SECRET_KEY` secret | ✅ qoyulub (2026-09-30) |
 | Android build (kart axını ilə) | ✅ `54581b4c` (2026-09-29) |
-| Canlı test | ⏳ sandbox açarı ilə başlayır |
+| Canlı test | 🚫 **bloklanıb** — aşağıya bax |
+
+## 🚫 Blok: Payriff Card Save-i aktivləşdirmir
+
+**2026-10-01.** Kart bağlama cəhdi `POST /api/v3/cards/save` sorğusunda
+`"Autopay is not enabled for this merchant account"` qaytarır (support
+ticket 406098 / 066300). Yəni Payriff kart saxlamanı da autoPay icazəsinin
+arxasında saxlayır.
+
+Aktivləşdirmə tələbinə cavab: **«Card Save funksiyasını hal-hazırki mərhələdə
+sizin üçün aktivləşdirmək mümkün olmayacaq.»**
+
+Bu, A axınının tamamını dayandırır: kart saxlanmır → autoPay yoxdur →
+komissiya avtomatik tutula bilmir. `0031`–`0037` migrationları, yeddi Edge
+Function və kart ekranı **düzgündür və yerindədir**, sadəcə icazə verilənə
+qədər işlək deyil. Kodda düzəldiləsi bir şey yoxdur.
+
+Payriff-ə toxunmayan yoxlamalar hələ də edilə bilər: müştəri ekranında kart
+seçiminin bağlı olması, kartsız ustanın 3 işdən sonra bloklanması, və
+komissiya bannerlərinin düzgün ardıcıllıqla görünməsi.
 
 ## ⚠️ Migrationlar barədə
 
