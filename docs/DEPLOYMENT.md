@@ -9,11 +9,11 @@ inanacaq.
 | Mərhələ | Vəziyyət |
 |---|---|
 | Migrationlar `0031`–`0037` | ✅ əl ilə run olunub |
-| Migration `0038` (Payriff-i çıxarır) | ⏳ **run edilməyib** |
+| Migration `0038` (Payriff-i çıxarır) | ✅ run olunub (2026-10-01) |
 | Kod `main`-də | ✅ |
 | Edge Function deploy | — qalmadı, hamısı silindi |
 | `PAYRIFF_SECRET_KEY` secret | ⏳ **silinməlidir** |
-| Android build | ✅ (kart ekranı olmadan yenidən yığılmalıdır) |
+| Android build | ⏳ kart ekranı olmadan yenidən yığılmalıdır |
 | Ödəniş provayderi | 🚫 seçilməyib |
 
 ## 🚫 Ödəniş provayderi yoxdur
