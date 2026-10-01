@@ -5,7 +5,6 @@ import { IncomingRequestScreen } from '../screens/provider/IncomingRequestScreen
 import { OfferPendingScreen } from '../screens/provider/OfferPendingScreen';
 import { ActiveJobScreen } from '../screens/provider/ActiveJobScreen';
 import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
-import { CardsScreen } from '../screens/provider/CardsScreen';
 import { RatingScreen } from '../screens/shared/RatingScreen';
 import { ProviderStackParamList } from './types';
 
@@ -28,7 +27,6 @@ export function ProviderRoot() {
       <Stack.Screen name="ActiveJob" component={ActiveJobScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Rating" component={RatingScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="ProviderServices" component={ProviderServicesScreen} />
-      <Stack.Screen name="Cards" component={CardsScreen} />
     </Stack.Navigator>
   );
 }

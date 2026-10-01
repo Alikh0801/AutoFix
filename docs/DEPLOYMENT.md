@@ -8,31 +8,40 @@ inanacaq.
 
 | Mərhələ | Vəziyyət |
 |---|---|
-| Migrationlar `0031`–`0035` | ✅ Supabase Dashboard SQL editorundan **əl ilə** run olunub |
+| Migrationlar `0031`–`0037` | ✅ əl ilə run olunub |
+| Migration `0038` (Payriff-i çıxarır) | ⏳ **run edilməyib** |
 | Kod `main`-də | ✅ |
-| Edge Function deploy | ✅ 7/7 `ACTIVE` (2026-09-29) |
-| `PAYRIFF_SECRET_KEY` secret | ✅ qoyulub (2026-09-30) |
-| Android build (kart axını ilə) | ✅ `54581b4c` (2026-09-29) |
-| Canlı test | 🚫 **bloklanıb** — aşağıya bax |
+| Edge Function deploy | — qalmadı, hamısı silindi |
+| `PAYRIFF_SECRET_KEY` secret | ⏳ **silinməlidir** |
+| Android build | ✅ (kart ekranı olmadan yenidən yığılmalıdır) |
+| Ödəniş provayderi | 🚫 seçilməyib |
 
-## 🚫 Blok: Payriff Card Save-i aktivləşdirmir
+## 🚫 Ödəniş provayderi yoxdur
 
-**2026-10-01.** Kart bağlama cəhdi `POST /api/v3/cards/save` sorğusunda
-`"Autopay is not enabled for this merchant account"` qaytarır (support
-ticket 406098 / 066300). Yəni Payriff kart saxlamanı da autoPay icazəsinin
-arxasında saxlayır.
+**2026-10-01.** Payriff Card Save funksiyasını bu mərhələdə aktivləşdirmədi
+(«hal-hazırki mərhələdə sizin üçün aktivləşdirmək mümkün olmayacaq»), kart
+saxlama olmadan isə autoPay işləmir. İnteqrasiya tamamilə çıxarıldı — Edge
+Function-lar, kart ekranı, kart cədvəli və Payriff müştərisi silindi.
 
-Aktivləşdirmə tələbinə cavab: **«Card Save funksiyasını hal-hazırki mərhələdə
-sizin üçün aktivləşdirmək mümkün olmayacaq.»**
+**Komissiya modeli yerindədir** və hesablanmağa davam edir; yalnız yığım
+addımı yoxdur. `docs/PAYMENTS.md` → «Növbəti provayder seçilərkən» bölməsində
+müqavilədən əvvəl soruşulmalı suallar var; birinci sual Payriff-in
+dayandırdığı məhz həmin məsələdir.
 
-Bu, A axınının tamamını dayandırır: kart saxlanmır → autoPay yoxdur →
-komissiya avtomatik tutula bilmir. `0031`–`0037` migrationları, yeddi Edge
-Function və kart ekranı **düzgündür və yerindədir**, sadəcə icazə verilənə
-qədər işlək deyil. Kodda düzəldiləsi bir şey yoxdur.
+### Qalan addımlar
 
-Payriff-ə toxunmayan yoxlamalar hələ də edilə bilər: müştəri ekranında kart
-seçiminin bağlı olması, kartsız ustanın 3 işdən sonra bloklanması, və
-komissiya bannerlərinin düzgün ardıcıllıqla görünməsi.
+1. `0038_drop_payriff_integration.sql` migrationını run et
+2. Supabase-dən `PAYRIFF_SECRET_KEY` secret-ini sil
+3. Yeni Android build (kart ekranı artıq yoxdur)
+4. Provayder seçiləndə: yığım addımını yaz və
+   `platform_settings.commission_collection_enabled` bayrağını `true` et
+
+### ⚠️ Bayraq barədə
+
+`commission_collection_enabled` **sönülüdür**. 0037 3 iş tamamlananda borc
+qalıbsa təklif verməyi bloklayır — amma ödəmək yolu olmadan bu, hər ustanı
+4-cü işdə birdəfəlik ilişdirərdi. Yeni provayder qoşulanda bayraq `true`
+edilməlidir, yoxsa qayda kağız üzərində qalır.
 
 ## ⚠️ Migrationlar barədə
 
@@ -55,109 +64,43 @@ Layihə ref-i: `wvyeoaygnatawcdzqcpx`.
 
 Yeganə qalan iş — aşağıdakı **test ardıcıllığı**.
 
-### 1. Secret ✅
+### 1. Secret
+
+Payriff açarı artıq lazım deyil:
 
 ```bash
-supabase login
-supabase secrets set PAYRIFF_SECRET_KEY=<merchant secret key> --project-ref <REF>
+supabase secrets unset PAYRIFF_SECRET_KEY --project-ref <REF>
 ```
 
-> ⚠️ **Hansı açarı qoyduğunu yoxla.** Payriff ayrıca sandbox açarı vermir:
-> mühiti Application-ın statusu müəyyən edir. Payriff hesabı → **Applications**
-> bölməsində `Development` statuslu Application-ın Secret Key-i test
-> ödənişləri üçündür. `Production` statuslu Application-ın açarı ilə
-> **hər əməliyyat realdır** — test kartı sadəcə rədd olunar, amma real kartla
-> real pul gedər. Test mərhələsində Development açarı olmalıdır.
->
-> Canlıya çıxanda tək dəyişiklik budur: `PAYRIFF_SECRET_KEY`-i Production
-> Application-ın açarı ilə əvəz et və funksiyaları yenidən deploy et. Kod,
-> URL və konfiqurasiya dəyişmir.
+### 2. Edge Function-lar
 
-- `PAYRIFF_BASE_URL` **qoyma.** Kodda düzgün default var
-  (`https://api.payriff.com/api/v3`). Hər iki mühit eyni URL-dən işləyir.
-- `PAYRIFF_MERCHANT_ID` **qoyma.** Payriff tələb etdiyini deyənə qədər lazım
-  deyil; qoyulmasa sorğuya heç göndərilmir.
-- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` avtomatik
-  gəlir.
+Qalmadı — hamısı Payriff-ə aid idi və silindi. Yeni provayder seçiləndə
+yenidən yazılacaq.
 
-### 2. Edge Function-lar ✅
+### 3. Tətbiq
 
 ```bash
-supabase functions deploy start-card-save       --project-ref <REF>
-supabase functions deploy check-card-save       --project-ref <REF>
-supabase functions deploy delete-card           --project-ref <REF>
-supabase functions deploy sync-cards            --project-ref <REF>
-supabase functions deploy settle-commission     --project-ref <REF>
-supabase functions deploy payriff-card-callback    --project-ref <REF> --no-verify-jwt
-supabase functions deploy payriff-payment-callback --project-ref <REF> --no-verify-jwt
-```
-
-Son iki əmrdəki `--no-verify-jwt` **mütləqdir**: Payriff callback göndərəndə
-JWT-si olmur, o bayraq olmasa callback 401 alıb çatmaz. Təhlükəsizlik itkisi
-yoxdur — callback-ə onsuz da inanmırıq, statusu həmişə Payriff API-sindən
-yenidən oxuyuruq (bax `docs/PAYMENTS.md` → Etibar modeli).
-
-### Edge Function-ları dəyişəndə
-
-```bash
-npm run check:functions
-```
-
-Bunu **deploy-dan əvvəl** işlət. Funksiyalar Deno-dur və `tsconfig.json`-dan
-kənardadır, yəni `tsc --noEmit` onlara ümumiyyətlə baxmır. Bir dəfə
-bağlanmamış şərh bloku repo-ya düşdü və yeddi funksiyanın **hamısının** deploy
-olunmasını dayandırdı — hər biri `_shared/payriff.ts`-i import edir, ona görə
-bir parse xətası hamısını bloklayır. Bu skript məhz həmin sinif səhvi tutur.
-
-### 3. Tətbiq ✅
-
-```bash
-npm install          # expo-web-browser yeni native paketdir
+npm install
 npx expo start -c    # iOS / Expo Go
 npm run build:android
 ```
 
-Mövcud Android APK-nı yeniləmək **bəs etmir** — o, `expo-web-browser` əlavə
-olunmazdan əvvəl yığılıb və native modulu yoxdur. EAS Update də həll etmir,
-çünki yalnız JS göndərir.
+Mövcud Android APK kart ekranını hələ də daşıyır — o ekran artıq heç nə ilə
+bağlı deyil, ona görə yeni build yığılmalıdır.
 
 ## Test ardıcıllığı
 
-Sandbox test kartı `docs/PAYMENTS.md`-dədir.
+Ödəniş hissəsi test ediləsi vəziyyətdə deyil. Payriff-ə toxunmayan yoxlamalar:
 
-1. Usta hesabı → Profil → **Ödəniş kartları** → Kart əlavə et → Payriff
-   səhifəsi açılmalıdır
-2. Kart məlumatlarını gir → brauzer bağlanır, ekran özü Payriff-i sorğulayır
-3. **«Kart əlavə olundu»** — yalnız `REVERSED` uğur sayılır
-4. 0.01 AZN tutulub dərhal qaytarılmalıdır (Payriff özü qaytarır)
-5. Yeganə kartı silməyə çalış → «Yeganə kartını silə bilməzsən»
-6. Kartsız usta ilə təklif ver → kart tələb edən xəta
-7. 1-2 iş tamamla → Qazanc-da boz banner «Daha N işdən sonra tutulacaq»
-8. 3-cü işi tamamla → banner qırmızı «Ödə»yə keçir
-9. «Ödə» → balansdan, çatmayan hissə kartdan tutulur
+1. Müştəri → sifariş → ödəniş üsulu: **«Kart» sönük, «tezliklə»**
+2. Usta 1-2 iş tamamlayır → Qazanc-da boz banner «Daha N işdən sonra
+   ödənilməlidir»
+3. Usta 3-cü işi tamamlayır → qırmızı banner «Komissiya borcu: X AZN —
+   ödəniş üsulu hazırlanır»
+4. Usta 4-cü işə təklif verə bilir — `commission_collection_enabled` sönülü
+   olduğu üçün bloklanmır. Bu, **qəsdən belədir**
 
-**Addım 3 `VERIFIED`-də ilişib qalsa:** bu `REVERSE_FAILED` deməkdir. Hazırda
-belə kartı yararsız sayırıq — qərarı dəyişmə, Payriff-in cavabını gözlə.
+## Növbəti addım
 
-**Addım 9 xəta versə:** Dashboard → Edge Functions → `settle-commission` →
-Logs. `autoPay failed`/`autoPay unresolved` sətrində `paymentStatus` və bankın
-cavabı görünür.
-
-## Payriff-ə göndərilmiş, cavab gözlənilən suallar
-
-Cavab gələndə `docs/PAYMENTS.md` → «Açıq suallar» bölməsi yenilənməlidir.
-
-1. autoPay-də 3D Secure tələb oluna bilərmi? *(ən vacibi — «hə» olarsa blok
-   qaydası dəyişməlidir, çünki usta öz günahı olmadan bloklanar)*
-2. autoPay-də idempotency key dəstəyi varmı?
-3. `REVERSE_FAILED` kartı yararlıdırmı?
-4. Saxlanmış kartın müddəti bitəndə nə olur?
-5. autoPay-də `merchant` parametri məcburidirmi? *(Create Order-də belə bir
-   parametr yoxdur — gözlənilən cavab «lazım deyil»)*
-6. `PaymentStatus` enum-u ilə Order Information-un `PAID/PENDING/FAILED`
-   dəyərləri niyə uyğun gəlmir?
-7. Əməliyyat başına minimum haqq və minimum məbləğ?
-8. Vəsaitin hesaba oturma müddəti, payout tələbləri?
-
-Cavab gəlməyincə **bu sahələrdə kod dəyişmə** — hazırkı davranış bilərəkdən
-ehtiyatlıdır və səbəbləri `docs/PAYMENTS.md`-də yazılıb.
+Ödəniş provayderi seçmək. `docs/PAYMENTS.md` → «Növbəti provayder
+seçilərkən» bölməsindəki doqquz sual müqavilədən əvvəl verilməlidir.

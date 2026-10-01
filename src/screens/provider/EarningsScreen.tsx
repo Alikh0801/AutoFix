@@ -1,9 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { fonts, type } from '../../theme/typography';
 import { Card } from '../../components/Card';
@@ -11,14 +10,9 @@ import { useCategories } from '../../context/CategoriesContext';
 import {
   fetchProviderEarnings,
   fetchSettlementState,
-  settleCommission,
   ProviderEarnings,
   SettlementState,
 } from '../../lib/api';
-import { errorMessage, gatewayMessage } from '../../lib/errors';
-import { ProviderStackParamList } from '../../navigation/types';
-
-type Nav = NativeStackNavigationProp<ProviderStackParamList>;
 
 const AZ_MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
 
@@ -32,14 +26,12 @@ function formatJobDate(iso: string | null): string {
 
 export function EarningsScreen() {
   const { getCategory } = useCategories();
-  const navigation = useNavigation<Nav>();
   const [data, setData] = useState<ProviderEarnings | null>(null);
   // The earnings row only knows the debt total. Whether it is collectable
   // yet — and whether the account is blocked over a failed charge — comes
   // from the settlement state.
   const [settlement, setSettlement] = useState<SettlementState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -77,74 +69,7 @@ export function EarningsScreen() {
   const owed = settlement?.commissionOwed ?? data.commissionOwed;
   const jobsUntilDue = settlement?.jobsUntilDue ?? 0;
   const isBlocked = settlement?.isBlocked ?? false;
-  const hasCard = settlement?.hasCard ?? true;
-  const awaitingResult = settlement?.awaitingResult ?? false;
   const isDue = owed > 0 && jobsUntilDue === 0;
-
-  const runSettlement = async () => {
-    setPaying(true);
-    try {
-      const res = await settleCommission();
-      await load();
-      if (res.awaitingResult) {
-        // Not a failure — the money may well have gone through. Saying
-        // "declined" here would be a guess, and inviting another attempt
-        // could take it twice.
-        Alert.alert(
-          'Ödəniş yoxlanılır',
-          'Bank hələ son cavabı verməyib. Nəticə bilinənə qədər təkrar tutulma olmayacaq — bir azdan yenidən yoxla.'
-        );
-      } else if (res.settled) {
-        const fromCard = res.fromCard ?? 0;
-        Alert.alert(
-          'Ödənildi',
-          fromCard > 0
-            ? `${res.amount} AZN tutuldu — ${res.fromBalance} AZN balansdan, ${fromCard} AZN kartdan.`
-            : `${res.amount} AZN balansından tutuldu.`
-        );
-      } else {
-        // The charge failed, so nothing was taken from the balance either and
-        // the account is now blocked. The bank's own wording is English and
-        // often cryptic, so it is translated before it reaches the usta.
-        Alert.alert(
-          'Ödəniş alınmadı',
-          `${gatewayMessage(res.reason ?? res.error)}\n\nYenidən cəhd edə, ya da yeni kart əlavə edə bilərsən.`
-        );
-      }
-    } catch (e: any) {
-      Alert.alert('Ödəniş alınmadı', errorMessage(e));
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  const handlePayCommission = () => {
-    if (!hasCard) {
-      navigation.navigate('Cards');
-      return;
-    }
-    Alert.alert(
-      'Komissiya borcu',
-      `${owed} AZN — əvvəlcə balansdan, çatmayan hissə isə kartından tutulacaq.`,
-      [
-        { text: 'Yox', style: 'cancel' },
-        { text: 'Ödə', onPress: runSettlement },
-      ]
-    );
-  };
-
-  const handleBlockedRetry = () => {
-    const why = settlement?.lastFailure ? `\n\nSəbəb: ${gatewayMessage(settlement.lastFailure)}` : '';
-    Alert.alert(
-      'Hesab bloklanıb',
-      `Komissiya borcu ${owed} AZN. Kartdan tutulmayana qədər yeni sifariş ala bilməzsən.${why}`,
-      [
-        { text: 'Bağla', style: 'cancel' },
-        { text: 'Kartı dəyiş', onPress: () => navigation.navigate('Cards') },
-        { text: 'Yenidən cəhd et', onPress: runSettlement },
-      ]
-    );
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -179,79 +104,29 @@ export function EarningsScreen() {
           <Text style={styles.balanceValue}>{data.walletBalance} AZN</Text>
         </Card>
 
-        {/* In order of how much they demand of the usta. An outstanding charge
-            comes first even when the account is still blocked from the
-            previous attempt: the only useful instruction then is to wait. */}
-        {awaitingResult ? (
-          // Tapping re-asks Payriff about the outstanding order; it never
-          // starts a second charge.
-          <Pressable style={styles.infoBanner} onPress={runSettlement} disabled={paying}>
-            <View style={styles.infoIcon}>
-              <Feather name="loader" size={16} color={colors.textDim} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.debtTitle}>Ödəniş yoxlanılır</Text>
-              <Text style={styles.debtSub}>
-                Nəticəni öyrənmək üçün toxun. Təkrar tutulma olmayacaq.
-              </Text>
-            </View>
-            {paying ? (
-              <ActivityIndicator color={colors.amber} />
-            ) : (
-              <Feather name="refresh-cw" size={15} color={colors.textDim} />
-            )}
-          </Pressable>
-        ) : isBlocked ? (
-          <Pressable style={styles.debtBanner} onPress={handleBlockedRetry} disabled={paying}>
+        {/* No in-app way to pay exists while a payment provider is being
+            chosen, so every banner here reports and none of them act. Offering
+            a button that cannot settle anything would be worse than silence. */}
+        {isBlocked ? (
+          <View style={styles.debtBanner}>
             <View style={styles.debtIcon}>
               <Feather name="slash" size={16} color={colors.danger} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Hesab bloklanıb — {owed} AZN</Text>
-              <Text style={styles.debtSub} numberOfLines={2}>
-                {gatewayMessage(settlement?.lastFailure, 'Komissiya kartından tutulmadı')}
-              </Text>
+              <Text style={styles.debtSub}>Dəstəklə əlaqə saxla</Text>
             </View>
-            {paying ? (
-              <ActivityIndicator color={colors.amber} />
-            ) : (
-              <Text style={styles.debtPay}>Həll et</Text>
-            )}
-          </Pressable>
-        ) : /* Due comes before the card prompt. An usta with no card and a bill
-               outstanding used to see only "add a card" and never the button
-               that settles it — and since 0036 they can bid without one, the
-               card prompt was also telling them something untrue. Paying is
-               the instruction now; handlePayCommission sends them to the card
-               page by itself when there is no card to charge. */
-        isDue ? (
-          <Pressable style={styles.debtBanner} onPress={handlePayCommission} disabled={paying}>
+          </View>
+        ) : isDue ? (
+          <View style={styles.debtBanner}>
             <View style={styles.debtIcon}>
               <Feather name="alert-circle" size={16} color={colors.danger} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.debtTitle}>Komissiya borcu: {owed} AZN</Text>
-              <Text style={styles.debtSub}>
-                {hasCard
-                  ? 'Balansdan, çatmasa kartdan tutulur'
-                  : 'Ödəmək üçün kart əlavə et — yeni sifariş ala bilmirsən'}
-              </Text>
+              <Text style={styles.debtSub}>Ödəniş üsulu hazırlanır</Text>
             </View>
-            {paying ? <ActivityIndicator color={colors.amber} /> : <Text style={styles.debtPay}>Ödə</Text>}
-          </Pressable>
-        ) : !hasCard ? (
-          <Pressable style={styles.warnBanner} onPress={() => navigation.navigate('Cards')}>
-            <View style={styles.warnIcon}>
-              <Feather name="credit-card" size={16} color={colors.amber} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.debtTitle}>Kart əlavə edilməyib</Text>
-              <Text style={styles.debtSub}>
-                İlk 3 sifariş kartsız keçir — komissiya vaxtı gələndə kart lazım olacaq
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={colors.amber} />
-          </Pressable>
+          </View>
         ) : owed > 0 ? (
           <View style={styles.infoBanner}>
             <View style={styles.infoIcon}>
@@ -261,8 +136,8 @@ export function EarningsScreen() {
               <Text style={styles.debtTitle}>Yığılan komissiya: {owed} AZN</Text>
               <Text style={styles.debtSub}>
                 {jobsUntilDue === 1
-                  ? 'Daha 1 işdən sonra tutulacaq'
-                  : `Daha ${jobsUntilDue} işdən sonra tutulacaq`}
+                  ? 'Daha 1 işdən sonra ödənilməlidir'
+                  : `Daha ${jobsUntilDue} işdən sonra ödənilməlidir`}
               </Text>
             </View>
           </View>
@@ -368,25 +243,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  warnBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.amberSoft,
-    borderWidth: 1,
-    borderColor: colors.amberDim,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 16,
-  },
-  warnIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -408,7 +264,6 @@ const styles = StyleSheet.create({
   },
   debtTitle: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.cream },
   debtSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textDim, marginTop: 1 },
-  debtPay: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.amber },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16 },
   statValue: { fontFamily: fonts.headingMedium, fontSize: 16, color: colors.cream },

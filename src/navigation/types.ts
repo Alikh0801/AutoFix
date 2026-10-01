@@ -39,7 +39,6 @@ export type ProviderStackParamList = {
   ActiveJob: { requestId: string };
   Rating: { requestId: string; rateeLabel: string };
   ProviderServices: undefined;
-  Cards: undefined;
 };
 
 export type ProviderTabParamList = {

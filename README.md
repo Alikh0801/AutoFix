@@ -12,14 +12,16 @@ Qeydiyyat **e-poçt + şifrə** ilədir; ünvan 6 rəqəmli kodla təsdiqlənir.
 Telefon nömrəsi hələ də alınır, çünki müştəri ilə usta bir-birinə onunla
 zəng edir — sadəcə artıq giriş açarı deyil.
 
-**Ödəniş** artıq saxta deyil: Payriff inteqrasiyası qurulub — usta kartını
-saxlayır, komissiya hər 3 tamamlanmış işdən sonra əvvəlcə balansdan, çatmayan
-hissə isə kartdan tutulur. Model və hər qərarın səbəbi
-[`docs/PAYMENTS.md`](docs/PAYMENTS.md)-dədir.
+**Ödəniş hələ yarımçıqdır.** Komissiya modeli qurulub və işləyir — hər
+tamamlanmış işdə hesablanır, hər 3 işdən sonra ödənilməlidir, borc qalanda
+yeni iş bağlanır. Çatmayan tək şey **yığım addımıdır**: ödəniş provayderi
+hələ seçilməyib, ona görə borc hesablanır, amma tutulmur.
 
-Kod hazırdır, amma **canlı test edilməyib** — Edge Function-lar hələ deploy
-olunmayıb. Vəziyyət və qalan addımlar:
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Müştəri üçün kartla ödəniş də bağlıdır — pul axını qurulmayıb, yalnız nağd
+işləyir.
+
+Model və hər qərarın səbəbi [`docs/PAYMENTS.md`](docs/PAYMENTS.md)-də,
+vəziyyət və qalan addımlar [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)-dədir.
 
 ## Texnologiya
 

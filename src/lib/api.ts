@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { ServiceError } from './errors';
 import { ServiceCategory, ServiceCategoryId } from '../data/mock';
 
 export type RequestStatus =
@@ -459,6 +458,10 @@ export async function fetchMyProviderState(): Promise<ProviderState | null> {
 }
 
 // --- Commission settlement --------------------------------------------------
+//
+// Accrual and the three-job rule live in Postgres and are independent of any
+// payment provider. What is missing is the collection step: no provider is
+// integrated yet, so the debt is reported here but nothing can settle it.
 
 export interface SettlementState {
   commissionOwed: number;
@@ -466,10 +469,7 @@ export interface SettlementState {
   isBlocked: boolean;
   /** Completed jobs still to go before collection is due. */
   jobsUntilDue: number;
-  hasCard: boolean;
   lastFailure: string | null;
-  /** A charge is outstanding at the gateway with no result yet. */
-  awaitingResult: boolean;
 }
 
 export async function fetchSettlementState(): Promise<SettlementState | null> {
@@ -482,115 +482,8 @@ export async function fetchSettlementState(): Promise<SettlementState | null> {
     walletBalance: Number(r.wallet_balance ?? 0),
     isBlocked: !!r.is_blocked,
     jobsUntilDue: Number(r.jobs_until_due ?? 0),
-    hasCard: !!r.has_card,
     lastFailure: r.last_failure ?? null,
-    awaitingResult: !!r.awaiting_result,
   };
-}
-
-export interface SettlementResult {
-  settled: boolean;
-  /** The charge reached Payriff but its result is not known yet. Not a
-   *  failure: nothing is blocked and nothing may be charged again until it
-   *  resolves. */
-  awaitingResult?: boolean;
-  amount?: number;
-  fromBalance?: number;
-  fromCard?: number;
-  /** Why the charge did not go through, when it did not. */
-  reason?: string;
-  error?: string;
-}
-
-/** Collects what is owed: balance first, saved card for the rest. Also what
- *  the block screen's retry calls — the repair path and the normal path are
- *  deliberately the same operation. */
-export async function settleCommission(): Promise<SettlementResult> {
-  const { data, error } = await supabase.functions.invoke('settle-commission', { body: {} });
-  if (error) {
-    const detail = await readFunctionError(error);
-    throw detail ? new ServiceError(detail) : new Error(error.message);
-  }
-  return data as SettlementResult;
-}
-
-/** supabase-js wraps a non-2xx Edge Function reply in an error whose body
- *  still has to be read to recover our own message. */
-async function readFunctionError(error: any): Promise<string | null> {
-  try {
-    const body = await error?.context?.json?.();
-    return typeof body?.error === 'string' ? body.error : null;
-  } catch {
-    return null;
-  }
-}
-
-async function invoke<T>(name: string, body: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(name, { body });
-  if (error) {
-    const detail = await readFunctionError(error);
-    throw detail ? new ServiceError(detail) : new Error(error.message);
-  }
-  return data as T;
-}
-
-// --- Saved cards ------------------------------------------------------------
-
-/** Payriff's own lifecycle names. Only 'reversed' can actually be charged:
- *  'verified' still has the 0.01 AZN verification outstanding. */
-export type CardStatus = 'created' | 'verified' | 'reversed' | 'reverse_failed' | 'declined' | 'expired';
-
-export interface SavedCard {
-  id: string;
-  maskedPan: string | null;
-  cardBrand: string | null;
-  status: CardStatus;
-  isDefault: boolean;
-  createdAt: string;
-}
-
-export function isCardUsable(card: SavedCard): boolean {
-  return card.status === 'reversed';
-}
-
-export async function fetchMyCards(): Promise<SavedCard[]> {
-  const { data, error } = await supabase.rpc('my_cards');
-  if (error) throw error;
-  return (data ?? []).map((c: any) => ({
-    id: c.id,
-    maskedPan: c.masked_pan ?? null,
-    cardBrand: c.card_brand ?? null,
-    status: c.status as CardStatus,
-    isDefault: !!c.is_default,
-    createdAt: c.created_at,
-  }));
-}
-
-/** Opens a card save. The provider completes it on Payriff's page; the 0.01 AZN
- *  verification is reversed automatically, so this costs them nothing. */
-export function startCardSave(): Promise<{ cardSaveId: string; paymentUrl: string }> {
-  return invoke('start-card-save');
-}
-
-/** Asks Payriff what actually happened, rather than waiting on a callback that
- *  may lag behind the browser closing. */
-export function checkCardSave(cardSaveId: string): Promise<{ status: string; stale?: boolean }> {
-  return invoke('check-card-save', { cardSaveId });
-}
-
-export async function setDefaultCard(cardId: string): Promise<void> {
-  const { error } = await supabase.rpc('set_default_card', { p_card_id: cardId });
-  if (error) throw error;
-}
-
-export function deleteCard(cardId: string): Promise<{ removed: boolean }> {
-  return invoke('delete-card', { cardId });
-}
-
-/** Drops cards Payriff no longer holds. Their list carries no expiry date, so
- *  this is the only way to find a card that died since it was saved. */
-export function syncCards(): Promise<{ synced: boolean; removed: number }> {
-  return invoke('sync-cards');
 }
 
 // --- Provider profile & skills ----------------------------------------------

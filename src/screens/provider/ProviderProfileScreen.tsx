@@ -71,7 +71,7 @@ export function ProviderProfileScreen() {
     soon?: boolean;
   }[] = [
     { icon: 'briefcase', label: 'Xidmət növlərim', onPress: () => navigation.navigate('ProviderServices') },
-    { icon: 'credit-card', label: 'Ödəniş kartları', onPress: () => navigation.navigate('Cards') },
+    { icon: 'credit-card', label: 'Ödəniş kartları', soon: true },
     { icon: 'file-text', label: 'Sənədlərim', soon: true },
     { icon: 'help-circle', label: 'Dəstək', soon: true },
   ];

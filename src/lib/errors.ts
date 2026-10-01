@@ -80,35 +80,20 @@ const RULES: { match: RegExp; message: string }[] = [
     message: 'Kartla ödəniş hazırlanır. Hələlik nağd seç.',
   },
 
-  // --- Cards and commission ---
+  // --- Commission ---
+  // The settlement rules stay; only the gateway that collected the money is
+  // gone. 'Commission settlement due' is raised by submit_offer and reaches a
+  // user only once collection is switched back on.
   {
     match: /commission settlement due/i,
-    message: '3 iş tamamlandı. Yeni sifariş almaq üçün Qazanc bölməsindən komissiya borcunu ödə.',
+    message: '3 iş tamamlandı. Yeni sifariş almaq üçün komissiya borcunu ödə.',
   },
-  {
-    match: /no usable card/i,
-    message: 'Əvvəlcə Profil → Ödəniş kartları bölməsindən kart əlavə et.',
-  },
-  {
-    match: /cannot remove the only card/i,
-    message: 'Yeganə kartını silə bilməzsən. Əvvəlcə yeni kart əlavə et.',
-  },
-  {
-    match: /card has a settlement in progress/i,
-    message: 'Bu kartla ödəniş davam edir. Bitənə qədər gözlə.',
-  },
-  { match: /card is not usable/i, message: 'Bu kart hələ təsdiqlənməyib.' },
-  { match: /card not found|unknown card save/i, message: 'Kart tapılmadı.' },
   { match: /nothing to settle/i, message: 'Ödəniləcək komissiya borcun yoxdur.' },
   {
     match: /settlement is not due yet/i,
-    message: 'Komissiya hər 3 tamamlanmış işdən sonra tutulur.',
+    message: 'Komissiya hər 3 tamamlanmış işdən sonra ödənilir.',
   },
   { match: /unknown settlement/i, message: 'Ödəniş qeydi tapılmadı.' },
-  {
-    match: /awaiting a result|still awaiting/i,
-    message: 'Əvvəlki ödənişin nəticəsi gözlənilir. Bir azdan yenidən yoxla.',
-  },
   { match: /not signed in|jwt|session/i, message: 'Sessiyanın vaxtı bitib. Yenidən daxil ol.' },
   { match: /network|fetch failed|timeout/i, message: 'Şəbəkə xətası. İnternet bağlantını yoxla.' },
   { match: /duplicate key|unique constraint/i, message: 'Bu məlumat artıq mövcuddur.' },
@@ -132,9 +117,10 @@ export class ServiceError extends Error {
  *  An unrecognised message is normally NOT echoed: raw Postgres text is noise
  *  at best and leaks schema details at worst. A ServiceError is the exception,
  *  because it carries what an Edge Function deliberately handed back. Swapping
- *  it for "Xəta baş verdi" cost a whole debugging round once already —
- *  Payriff's "Autopay is not enabled for this merchant account" was replaced
- *  by a shrug, and the reason had to be dug out of the dashboard logs. */
+ *  that for "Xəta baş verdi" cost a whole debugging round once: a payment
+ *  gateway had sent the exact reason it refused, and it was replaced by a
+ *  shrug one step before the screen, so the answer had to be dug out of the
+ *  function logs instead. */
 export function errorMessage(e: unknown, fallback = 'Xəta baş verdi. Yenidən cəhd et.'): string {
   const raw = typeof e === 'string' ? e : (e as any)?.message;
   if (!raw) return fallback;
@@ -144,78 +130,3 @@ export function errorMessage(e: unknown, fallback = 'Xəta baş verdi. Yenidən 
   return e instanceof ServiceError ? raw : fallback;
 }
 
-// --- Payriff / bank wording -------------------------------------------------
-//
-// A failed charge arrives as free text from two directions: Payriff's own
-// documented ResultMessages, and whatever the issuing bank wrote in
-// responseDescription. Both are English, and the second one is not a list we
-// control. The point of splitting this from errorMessage is that the advice
-// differs: some of these the usta can fix (top up, use another card), and the
-// rest are ours to fix — for those, saying "try again shortly" is honest and
-// naming the real cause would only mislead.
-
-const GATEWAY_RULES: { match: RegExp; message: string }[] = [
-  // The usta can act on these.
-  {
-    match: /insufficient fund|not sufficient|no funds|insufficient balance/i,
-    message: 'Kartda kifayət qədər vəsait yoxdur.',
-  },
-  // Ordered before the generic ones: "Link is expired!" and "Token expired"
-  // are ours, not the card's, and are matched further down.
-  { match: /expired card|card (has )?expired/i, message: 'Kartın müddəti bitib.' },
-  {
-    match: /lost card|stolen card|restricted card|card blocked|blocked card|pick.?up card/i,
-    message: 'Bank bu kartı bloklayıb. Başqa kart əlavə et.',
-  },
-  {
-    match: /limit|exceed/i,
-    message: 'Kartın limiti aşılıb. Bankla danış və ya başqa kart əlavə et.',
-  },
-  {
-    match: /do not hono|not permitted|transaction not allowed|refer to card issuer/i,
-    message: 'Bank əməliyyata icazə vermədi. Bankla danış və ya başqa kart yoxla.',
-  },
-  {
-    match: /invalid card|invalid pan|invalid account|no such card|card not found/i,
-    message: 'Kart məlumatları qəbul edilmədi. Kartı yenidən əlavə et.',
-  },
-  {
-    match: /3-?d.?secure|3ds|authentication failed|cardholder|not enrolled/i,
-    message: 'Kart təsdiqlənmədi. Kartı yenidən əlavə et.',
-  },
-
-  // Payriff's own documented wording — these are our side, not the usta's.
-  {
-    match: /internal error|occurred problem with processing|system error/i,
-    message: 'Ödəniş sistemində texniki xəta oldu. Bir azdan yenidən cəhd et.',
-  },
-  {
-    match: /unauthorized|token (not present|is not active|expired)|invalid token|username or password/i,
-    message: 'Ödəniş sistemi ilə əlaqə qurulmadı. Bir azdan yenidən cəhd et.',
-  },
-  {
-    match: /invalid origin|invalid procedure|client code is invalid|validation error|invalid parameters/i,
-    message: 'Ödəniş sorğusu qəbul edilmədi. Bir azdan yenidən cəhd et.',
-  },
-  { match: /link is expired/i, message: 'Ödəniş linkinin vaxtı bitib. Yenidən başla.' },
-  {
-    match: /no record found|no invoice found|application not found|user not found|not found/i,
-    message: 'Ödəniş qeydi tapılmadı. Bir azdan yenidən cəhd et.',
-  },
-  { match: /timeout|timed out|network/i, message: 'Bankla əlaqə kəsildi. Yenidən cəhd et.' },
-  { match: /declined|decline|rejected/i, message: 'Bank ödənişdən imtina etdi.' },
-];
-
-/** Azerbaijani wording for a gateway or bank failure reason.
- *  Unrecognised text is never shown: an usta reading "Do not honour" learns
- *  nothing, and the raw string can carry order ids and internal detail. */
-export function gatewayMessage(
-  raw: string | null | undefined,
-  fallback = 'Kartdan tutulmadı. Kartını yoxla və yenidən cəhd et.'
-): string {
-  if (!raw) return fallback;
-  for (const rule of GATEWAY_RULES) {
-    if (rule.match.test(raw)) return rule.message;
-  }
-  return fallback;
-}

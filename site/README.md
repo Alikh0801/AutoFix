@@ -1,9 +1,9 @@
 # site/ — public landing page
 
-Payriff-in Application formasındakı **App URL** sahəsi üçün. O sahə kod
-repo-su üçün deyil: acquirer oradan **nə satıldığını** görməlidir — MCC təyin
-etmək, risk qiymətləndirmək və chargeback zamanı mövqeyi müdafiə etmək üçün.
-Bu səhifə məhz həmin sualları cavablandırır.
+Ödəniş provayderinə müraciət edərkən **App URL / Company website** sahəsi
+üçün. O sahə kod repo-su üçün deyil: acquirer oradan **nə satıldığını**
+görməlidir — MCC təyin etmək, risk qiymətləndirmək və chargeback zamanı
+mövqeyi müdafiə etmək üçün. Bu səhifə məhz həmin sualları cavablandırır.
 
 Tək fayldır (`index.html`), xarici asılılığı yoxdur (yalnız Google Fonts), ona
 görə istənilən statik hostinqdə işləyir.
